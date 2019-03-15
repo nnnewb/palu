@@ -1,4 +1,6 @@
-from ply.lex import LexToken
+from logging import getLogger
+
+from palu.core.annotations.ply.lex import LexToken
 
 tokens = (
     'BRACE_OPEN',
@@ -25,6 +27,9 @@ tokens = (
     'COMMA',
     'LParen',
     'RParen',
+
+    # counting
+    'NEWLINE',
 )
 
 t_BRACE_OPEN = r'{'
@@ -40,9 +45,14 @@ t_LITERAL_STRING_TEMPLATE = r'`.*`'
 t_COMMA = r','
 t_LParen = r'\('
 t_RParen = r'\)'
-t_ignore = ' \t\r\n\f\v'
+t_ignore = ' \t\r\f\v'
 
 literals = ';'
+
+
+def t_NEWLINE(t: LexToken):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
 
 
 def t_IDENTIFIER(t: LexToken):
@@ -53,6 +63,9 @@ def t_IDENTIFIER(t: LexToken):
     return t
 
 
-def t_error(t):
+def t_error(t: LexToken):
     print("Illegal character '{}' found.".format(t.value[0]))
     t.lexer.skip(1)
+
+
+logger = getLogger('palu.core.lexer.rules')

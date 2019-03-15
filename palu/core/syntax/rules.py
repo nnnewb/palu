@@ -1,10 +1,35 @@
+"""
+grammar definition
+
+stmt : expr ';' | if | while | for | with
+
+expr : expr_bin | expr_fn | expr_call
+
+# 二元运算符
+expr_bin : expr '+' term
+         | expr '-' term
+term : expr '*' factor
+     | expr '/' factor
+factor : '(' expr ')'
+       | LITERALS
+       | expr_fn
+       | expr_call
+expr_fn : KW_FN IDENTIFIER '(' ARGS ')' do_block KW_END
+expr_call : '(' IDENTIFIER
+"""
+
+from logging import getLogger
+
 from ply.yacc import YaccProduction
 
+from palu.core.annotations.ply.lex import LexToken
 from palu.core.ast import BinaryExpr, FuncCallArgs, FuncCall, WhileLoop, CodeBlock
 from palu.core.lex.rules import tokens
 
 tokens = tokens
 start = 'stmt'
+
+logger = getLogger('palu.core.syntax.rules')
 
 
 def p_stmt(p: YaccProduction):
@@ -97,27 +122,10 @@ def p_do_block(p: YaccProduction):
             p[0] = p[3]
 
 
-if __name__ == '__main__':
-    from ply import yacc
-    from ply.lex import lex
-    from palu.core.lex import rules
-    from logging import getLogger, basicConfig, DEBUG
-
-    basicConfig(level=DEBUG, format='%(filename)10s:%(lineno)4d: %(message)s')
-
-    lexLogger = getLogger('lex')
-    yaccLogger = getLogger('yacc')
-
-    lexer = lex(rules, debug=True, debuglog=lexLogger)
-    parser = yacc.yacc(debug=True, debuglog=yaccLogger)
-    result = parser.parse('''say hi;''', lexer=lexer, debug=yaccLogger)
-    print(result)
-    # while True:
-    #     try:
-    #         s = input('prompt > ')
-    #     except EOFError:
-    #         break
-    #     if not s:
-    #         continue
-    #     result = parser.parse(s, lexer=lexer)
-    #     print(result)
+def p_error(p: LexToken):
+    lexer = p.lexer
+    last_cr = lexer.lexdata.rfind('\n', 0, lexer.lexpos)
+    if last_cr < 0:
+        last_cr = 0
+    col = (p.lexpos - last_cr) + 1
+    print('Syntax error at line {} col {}, token {}'.format(lexer.lineno, col, p.value))

@@ -1,21 +1,8 @@
 from ply.lex import lex
 from ply.yacc import yacc
 
-tokens = (
-    'identifier',
-)
+from palu.core.lex import rules as lex_rules_mod
+from palu.core.syntax import rules as grammar_rules_mod
 
-t_ignore=' \t\n\r\f\v'
-t_identifier = '[a-zA-Z]+'
-literals = ';'
-
-
-def p_stmt(p):
-    """ stmt : identifier identifier ';' """
-    p[0] = (p[1], p[2])
-
-
-lexer = lex()
-parser = yacc()
-result = parser.parse('name name;', lexer=lexer)
-print(result)
+lexer = lex(lex_rules_mod, debug=True, debuglog=lex_rules_mod.logger)
+parser = yacc(module=grammar_rules_mod, debug=True, debuglog=grammar_rules_mod.logger)
