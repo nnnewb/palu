@@ -21,6 +21,7 @@ def p_stmt(p: YaccProduction):
     """ stmt : expr ';'
             | if
             | while
+            | def
     """
     p[0] = p[1]
 
@@ -82,42 +83,57 @@ def p_args(p: YaccProduction):
             p[0] = p[1]
 
 
+def p_block(p: YaccProduction):
+    """ block : stmt block
+                | empty
+    """
+    if len(p) == 2:
+        p[0] = ASTNode(ASTType.BLOCK)
+    else:
+        p[0] = ASTNode(ASTType.BLOCK, p[1], *p[2][1:])
+
+
 def p_if(p: YaccProduction):
-    """ if : KW_IF expr then_block
+    """ if : KW_IF expr then_
+            | KW_IF expr else_
+        then_ : KW_THEN block KW_END
+        else_ : KW_THEN block KW_ELSE block KW_END
     """
-    p[0] = ASTNode(ASTType.IF, p[2], p[3])
-
-
-def p_then_block(p: YaccProduction):
-    """ then_block : KW_THEN then_stmt_
-        then_stmt_ : stmt then_stmt_
-                | KW_END
-    """
-    if len(p) == 3 and p[1] != 'then':
-        p[0] = ASTNode(*[p[1], *p[2]])
-    elif len(p) == 3 and p[1] == 'then':
-        p[0] = p[2]
-    elif len(p) == 2:
-        p[0] = []
+    if len(p) == 4:
+        if p[1] == 'if':
+            # | KW_IF expr then_/else_
+            p[0] = ASTNode(ASTType.IF, p[2], *p[3])
+        elif p[1] == 'then':
+            # | KW_THEN block KW_END
+            p[0] = [p[2]]
+    elif len(p) == 6:
+        # | KW_THEN block KW_ELSE block KW_END
+        p[0] = [p[2], p[4]]
 
 
 def p_while(p: YaccProduction):
-    """ while : KW_WHILE expr do_block
+    """ while : KW_WHILE expr KW_DO block KW_END
     """
-    p[0] = ASTNode(ASTType.WHILE, p[2], p[3])
+    p[0] = ASTNode(ASTType.WHILE, p[2], p[4])
 
 
-def p_do_block(p: YaccProduction):
-    """ do_block : KW_DO do_stmt_
-        do_stmt_ : stmt do_stmt_
-                | KW_END
+def p_def(p: YaccProduction):
+    """ def : KW_DEF IDENTIFIER '(' params ')' block KW_END
     """
-    if len(p) == 3 and p[1] != 'do':
-        p[0] = ASTNode(*[p[1], *p[2]])
-    elif len(p) == 3 and p[1] == 'do':
-        p[0] = p[2]
-    elif len(p) == 2:
+    p[0] = ASTNode(ASTType.FNDEF, p[2], p[4], p[6])
+
+
+def p_params(p: YaccProduction):
+    """ params : IDENTIFIER ',' params
+                | IDENTIFIER empty
+                | empty
+    """
+    if len(p) == 2:
         p[0] = []
+    elif len(p) == 3:
+        p[0] = ASTNode(ASTType.PARAMETERS, p[1])
+    else:
+        p[0] = ASTNode(ASTType.PARAMETERS, p[1], *p[3][1:])
 
 
 def p_error(p: LexToken):

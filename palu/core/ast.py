@@ -14,6 +14,9 @@ class ASTType(Enum):
     DIVIDE = '/'
     IDENTIFIER = 'id'
     FNCALL = 'fncall'
+    FNDEF = 'fndef'
+    BLOCK = 'block'
+    PARAMETERS = 'parameters'
 
 
 class ASTNode(Sequence):

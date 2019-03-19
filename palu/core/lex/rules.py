@@ -11,7 +11,6 @@ tokens = (
     'KW_ELIF',
     'KW_WHILE',
     'KW_DO',
-    'KW_FOR',
     'KW_IN',
     'KW_END',
     'KW_DEF',
@@ -20,7 +19,6 @@ tokens = (
     'LITERAL_STRING',
     'LITERAL_STRING_TEMPLATE',
     'IDENTIFIER',
-    # counting
     'NEWLINE',
 )
 
