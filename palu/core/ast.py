@@ -1,41 +1,85 @@
-class FunctionCallExpr:
-
-    def __init__(self, function_name, *args, **kwargs):
-        self.function_name = function_name
-        self.positional_arguments = args
-        self.keyword_arguments = kwargs
+from typing import Union
+from collections.abc import Sequence
+from enum import Enum
 
 
-class BinaryExpr:
+class ASTType(Enum):
+    WHILE = 'while'
+    IF = 'if'
+    THEN = 'then'
+    DO = 'do'
+    END = 'end'
 
-    def __init__(self, operator, l_operand, r_operand):
+
+class ASTNode(Sequence[Union['ASTNode', ASTType]]):
+    def __init__(self, *args):
+        self._items = [*args]
+
+    def __getitem__(self, idx):
+        return self._items[idx]
+
+    def __len__(self):
+        return len(self._items)
+
+
+class Stmt:
+    pass
+
+
+class SimpleStmt(Stmt):
+
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f'<SIMPLE_STMT expr = {self.expr} >'
+
+
+class Expr:
+    pass
+
+
+class BinExpr(Expr):
+    def __init__(self, operator, loperand, roperand):
         self.operator = operator
-        self.left_operand = l_operand
-        self.right_operand = r_operand
+        self.loperand = loperand
+        self.roperand = roperand
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f'<BINARY_EXPR {self.loperand} {self.operator} {self.roperand}>'
 
 
-class FuncCall:
-
-    def __init__(self, identifier, args):
-        self.func_identifier = identifier
-        self.func_args = args
+class Literal(Expr):
+    def __init__(self, literal):
+        self.literal = literal
 
 
-class FuncCallArgs:
+class FnCall(Expr):
+    def __init__(self, fn, args):
+        self.fn = fn
+        self.args = args
 
-    def __init__(self, *args, **kwargs):
-        self.positional_args = [*args]
-        self.keyword_args = {**kwargs}
+
+class Variable(Expr):
+    def __init__(self, name):
+        self.name = name
+
+
+class Branches:
+
+    def __init__(self, condition, codeblock):
+        self.condition = condition
+        self.codeblock = codeblock
 
 
 class WhileLoop:
 
-    def __init__(self, condition, do_block):
+    def __init__(self, condition, codeblock):
         self.condition = condition
-        self.do_block = do_block
-
-
-class CodeBlock:
-
-    def __init__(self, *expr):
-        self.all_expr = [*expr]
+        self.codeblock = codeblock
