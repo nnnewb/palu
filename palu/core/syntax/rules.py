@@ -18,10 +18,9 @@ def p_empty(p: YaccProduction):
 
 
 def p_stmt(p: YaccProduction):
-    """ stmt : expr ';'
+    """ stmt : expr
             | if
             | while
-            | def
             | return
     """
     p[0] = p[1]
@@ -44,6 +43,7 @@ def p_expr(p: YaccProduction):
             | term
         term : factor '*' term
             | factor '/' term
+            | uminus
             | factor
     """
     if len(p) == 2:
@@ -57,12 +57,19 @@ def p_factor(p: YaccProduction):
             | LITERAL_NUMBER
             | LITERAL_STRING
             | LITERAL_STRING_TEMPLATE
+            | def
             | fncall
     """
     if len(p) == 4:
         p[0] = p[2]
     else:
         p[0] = p[1]
+
+
+def p_prec_uminus(p: YaccProduction):
+    """ uminus : '-' factor
+    """
+    p[0] = ASTNode(ASTType.MINUS, p[2])
 
 
 def p_fn_call(p: YaccProduction):
@@ -121,10 +128,10 @@ def p_if(p: YaccProduction):
             p[0] = ASTNode(ASTType.IF, p[2], *p[3])
         elif p[1] == 'then':
             # | KW_THEN block KW_END
-            p[0] = [*p[2][1:]]
+            p[0] = [ASTNode(ASTType.THEN, *p[2][1:])]
     elif len(p) == 6:
         # | KW_THEN block KW_ELSE block KW_END
-        p[0] = ASTNode(ASTNode(ASTType.THEN, *p[2][1:]), ASTNode(ASTType.ELSE, *p[4][1:]))
+        p[0] = [ASTNode(ASTType.THEN, *p[2][1:]), ASTNode(ASTType.ELSE, *p[4][1:])]
 
 
 def p_while(p: YaccProduction):
@@ -153,7 +160,7 @@ def p_params(p: YaccProduction):
 
 
 def p_return(p: YaccProduction):
-    """ return : KW_RETURN expr ';'
+    """ return : KW_RETURN expr
     """
     p[0] = ASTNode(ASTType(p[1]), p[2])
 

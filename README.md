@@ -28,7 +28,7 @@ REPL => (S(t0+deltaT)-S(t0))/deltaT
 ### 2. function call
 
 ```
-REPL => sqrt(abs(2*2)+abs(2*2));
+REPL => sqrt(abs(2*2)+abs(2*2))
 ?> (sqrt (+ (abs (* 2 2)) (abs (* 2 2))))
 ```
 
@@ -36,9 +36,9 @@ REPL => sqrt(abs(2*2)+abs(2*2));
 
 ```
 REPL => if dividend then
-            divisor/dividend;
+            divisor/dividend
         else
-            print('dividend should not be zero');
+            print('dividend should not be zero')
         end
 ?> (if dividend (then (/ divisor dividend)) (else (print 'dividend should not be zero')))
 ```
@@ -48,9 +48,9 @@ REPL => if dividend then
 ```
 REPL => def fib(n)
             if n == 0 or n == 1 then
-                return n;
+                return n
             else
-                return fib(n - 1) + fib(n - 2);
+                return fib(n - 1) + fib(n - 2)
             end
         end
 ?> (define fib (parameters 'n')
