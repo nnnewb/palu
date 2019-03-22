@@ -6,15 +6,15 @@ internal presentation just like scheme.
 
 ## mile stone
 
-[X] simple binary expr syntax
-[X] function call syntax
-[X] branches/loop syntax
-[X] user function syntax
-[ ] AST execute
-[ ] builtin function
-[ ] maybe something else...? I don't known.
-[ ] module
-[ ] AOT/JIT compile support (try LLVM)
+- [X] simple binary expr syntax
+- [X] function call syntax
+- [X] branches/loop syntax
+- [X] user function syntax
+- [ ] AST execute
+- [ ] builtin function
+- [ ] maybe something else...? I don't known.
+- [ ] module
+- [ ] AOT/JIT compile support (try LLVM)
 
 ## example
 
