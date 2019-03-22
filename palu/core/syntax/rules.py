@@ -9,6 +9,15 @@ from palu.core.ast import ASTNode, ASTType, Identifier
 tokens = tokens
 start = 'stmt'
 
+precedence = (
+    ('left', 'OP_ASSIGN'),
+    ('left', '+', '-'),
+    ('left', '*', '/'),
+    ('left', 'OP_EQ', 'OP_NE', 'OP_GT', 'OP_GE', 'OP_LT', 'OP_LE'),
+    ('left', 'IDENTIFIER'),
+    ('left', 'LP', 'RP'),
+)
+
 logger = getLogger('palu.core.syntax.rules')
 
 
@@ -43,17 +52,18 @@ def p_expr(p: YaccProduction):
             | term
         term : factor '*' term
             | factor '/' term
-            | uminus
             | factor
     """
     if len(p) == 2:
         p[0] = p[1]
+    elif len(p) == 3:
+        p[0] = ASTNode(ASTType(p[1]), p[2])
     else:
         p[0] = ASTNode(ASTType(p[2]), p[1], p[3])
 
 
 def p_factor(p: YaccProduction):
-    """ factor : '(' expr ')'
+    """ factor : LP expr RP
             | LITERAL_NUMBER
             | LITERAL_STRING
             | LITERAL_STRING_TEMPLATE
@@ -66,21 +76,15 @@ def p_factor(p: YaccProduction):
         p[0] = p[1]
 
 
-def p_prec_uminus(p: YaccProduction):
-    """ uminus : '-' factor
-    """
-    p[0] = ASTNode(ASTType.MINUS, p[2])
-
-
 def p_fn_call(p: YaccProduction):
-    """ fncall : IDENTIFIER '(' args ')'
+    """ fncall : IDENTIFIER LP args RP
                 | IDENTIFIER
     """
     if len(p) == 2:
         # | IDENTIFIER
         p[0] = Identifier(p[1])
     else:
-        # | IDENTIFIER '(' args ')'
+        # | IDENTIFIER LP args RP
         p[0] = ASTNode(Identifier(p[1]), *p[3])
 
 
@@ -141,7 +145,7 @@ def p_while(p: YaccProduction):
 
 
 def p_def(p: YaccProduction):
-    """ def : KW_DEF IDENTIFIER '(' params ')' block KW_END
+    """ def : KW_DEF IDENTIFIER LP params RP block KW_END
     """
     p[0] = ASTNode(ASTType.FNDEF, Identifier(p[2]), ASTNode(*p[4]), *p[6][1:])
 

@@ -21,6 +21,7 @@ class ASTType(Enum):
     GREATER_THAN_OR_EQUALS = '>='
     OR = 'or'
     AND = 'and'
+    NOT = 'not'
     RETURN = 'return'
     IDENTIFIER = 'identifier'
     FNDEF = 'define'

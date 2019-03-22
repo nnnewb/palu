@@ -19,6 +19,7 @@ tokens = (
     'KW_RETURN',
     'KW_OR',
     'KW_AND',
+    'KW_NOT',
     'OP_ARROW',
     'OP_ASSIGN',
     'OP_EQ',
@@ -27,6 +28,8 @@ tokens = (
     'OP_GE',
     'OP_LT',
     'OP_LE',
+    'LP',
+    'RP',
     'LITERAL_NUMBER',
     'LITERAL_STRING',
     'LITERAL_STRING_TEMPLATE',
@@ -35,6 +38,8 @@ tokens = (
     'COMMENT',
 )
 
+t_LP = r'\('
+t_RP = r'\)'
 t_ignore_COMMENT = r'--.*'
 t_OP_ARROW = r'=>'
 t_OP_ASSIGN = r'='
@@ -47,7 +52,7 @@ t_OP_LE = r'<='
 t_LITERAL_STRING_TEMPLATE = r'`.*?`'
 t_ignore = ' \t\r\f\v'
 
-literals = r';\+\-\*/\(\),\{\}'
+literals = r';\+\-\*/,\{\}'
 
 
 def t_NEWLINE(t: LexToken):
@@ -59,12 +64,12 @@ def t_IDENTIFIER(t: LexToken) -> LexToken:
     r"""[a-zA-Z_][a-zA-Z0-9_-]*"""
     t.type = "KW_{}".format(t.value.upper()) if t.value in ('if', 'then', 'else', 'elif',
                                                             'while', 'do', 'for', 'in', 'end',
-                                                            'def', 'return', 'and', 'or') else 'IDENTIFIER'
+                                                            'def', 'return', 'and', 'or', 'not') else 'IDENTIFIER'
     return t
 
 
 def t_LITERAL_NUMBER(t: LexToken) -> LexToken:
-    r'''(0x\d+|b[01]+|\-?\d+)'''
+    r'''(0x\d+|b[01]+|\d+)'''
     if t.value.startswith('b'):
         t.value = int(t.value[1:], 2)
     elif t.value.startswith('0x'):
