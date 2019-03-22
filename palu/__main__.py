@@ -1,4 +1,5 @@
 from logging import basicConfig
+from prompt_toolkit import prompt
 
 from palu.core.parser import lexer, parser
 
@@ -8,6 +9,6 @@ basicConfig(level='DEBUG', format='%(levelname)8s - %(asctime)10s - %(name)18s -
 # REPL
 
 while True:
-    inp = input('REPL => ')
+    inp = prompt('REPL => ', multiline=True)
     result = parser.parse(inp, lexer=lexer)
     print('?> {}'.format(result))
