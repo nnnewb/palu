@@ -1,15 +1,15 @@
-from logging import basicConfig, getLogger, FileHandler
+from palu.core.parser import PaluSyntaxError, Parser
 from prompt_toolkit import prompt
 
 
-basicConfig(level='DEBUG', format='%(levelname)8s - %(asctime)10s - %(name)18s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S', handlers=[FileHandler('./parser.log', 'w+')])
+parser = Parser()
 
 # REPL
-
 while True:
-    from palu.core.parser import lexer, parser
-    logger = getLogger('parser-runtime')
     inp = prompt('REPL => ')
-    result = parser.parse(inp, lexer=lexer, debug=logger)
-    print('?> {}'.format(result))
+    try:
+        result = parser.parse('repl', inp)
+    except PaluSyntaxError as e:
+        print(f'syntax error at {e.line}:{e.column}')
+    else:
+        print('?> {}'.format(result.root_node.sexp()))

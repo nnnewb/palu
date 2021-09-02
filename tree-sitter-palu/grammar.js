@@ -35,8 +35,7 @@ module.exports = grammar({
         $.while,
         $.if,
         $.else,
-        $.return,
-        $.codeblock
+        $.return
       ),
     empty: ($) => ";",
     expr: ($) =>
@@ -122,10 +121,10 @@ module.exports = grammar({
 
     // let ident [: type_ident] [= expr]
     declare: ($) =>
-      seq("let", $.ident, optional($.typing), optional(seq("=", $.expr))),
+      seq("let", $.typed_ident, optional(seq("=", $.expr))),
 
     // external ident : type
-    external: ($) => seq("external", $.ident, $.typing),
+    external: ($) => seq("external", $.typed_ident),
 
     // ([ident [, ident]]): type => (codeblock | expr)
     lambda: ($) => seq($.func_signature, "=>", choice($.codeblock, $.expr)),
@@ -146,10 +145,10 @@ module.exports = grammar({
     // identifier
     // =======================================================
     ident: ($) => /[a-zA-Z_]\w*/,
+    typed_ident: ($) => seq($.ident, $.typing),
     typing: ($) => seq(":", choice($.ident, $.func_signature)),
     func_signature: ($) => seq($.params, $.typing),
-    params: ($) =>
-      seq("(", optional(seq($.ident, optional(seq(",", $.ident)))), ")"),
+    params: ($) => seq("(", seq($.typed_ident, optional(seq(",", $.typed_ident))), ")"),
 
     // =======================================================
     // literals
