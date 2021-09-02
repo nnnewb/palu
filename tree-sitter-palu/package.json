@@ -4,7 +4,9 @@
   "description": "tree-sitter palu",
   "main": "bindings/node",
   "scripts": {
-    "generate": "tree-sitter generate"
+    "gen": "tree-sitter generate",
+    "play": "tree-sitter playground",
+    "build:wasm":"tree-sitter build-wasm"
   },
   "author": "",
   "license": "MIT",

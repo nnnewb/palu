@@ -35,11 +35,13 @@ module.exports = grammar({
         $.while,
         $.if,
         $.else,
-        $.return
+        $.return,
+        $.codeblock
       ),
     empty: ($) => ";",
     expr: ($) =>
       choice(
+        $.ident_expr,
         $.binary_expr,
         $.unary_expr,
         $.cond_expr,
@@ -53,6 +55,9 @@ module.exports = grammar({
         $.null_lit
       ),
     parenthesized_expr: ($) => seq("(", $.expr, ")"),
+
+    ident_expr: ($) =>
+      prec(PREC.FIELD, seq($.ident, optional(repeat(seq(".", $.ident))))),
 
     cond_expr: ($) =>
       prec.right(
@@ -111,8 +116,9 @@ module.exports = grammar({
       );
     },
 
-    call_expr: ($) => seq($.func_name, "(", $.args, ")"),
-    args: ($) => seq($.expr, optional(repeat(seq(",", $.expr)))),
+    call_expr: ($) => prec(PREC.CALL, seq($.ident_expr, $.argument_list)),
+    argument_list: ($) =>
+      seq("(", optional(seq($.expr, optional(repeat(seq(",", $.expr))))), ")"),
 
     // let ident [: type_ident] [= expr]
     declare: ($) =>
@@ -121,24 +127,15 @@ module.exports = grammar({
     // external ident : type
     external: ($) => seq("external", $.ident, $.typing),
 
-    // ([ident [, ident]]) [: type]=> (codeblock | expr)
-    lambda: ($) =>
-      seq(
-        "(",
-        optional($.params),
-        ")",
-        optional($.typing),
-        "=>",
-        choice($.codeblock, $.expr)
-      ),
-    params: ($) => seq($.ident, optional(seq(",", $.ident))),
+    // ([ident [, ident]]): type => (codeblock | expr)
+    lambda: ($) => seq($.func_signature, "=>", choice($.codeblock, $.expr)),
 
     // while expr stmt
-    while: ($) => seq("while", $.expr, $.stmt),
+    while: ($) => seq("while", $.expr, $.codeblock),
     // if expr stmt
-    if: ($) => seq("if", $.expr, $.stmt),
+    if: ($) => seq("if", $.expr, $.codeblock),
     // else stmt
-    else: ($) => seq("else", $.stmt),
+    else: ($) => seq("else", choice($.codeblock, $.if)),
     // return expr
     return: ($) => seq("return", $.expr),
 
@@ -149,9 +146,10 @@ module.exports = grammar({
     // identifier
     // =======================================================
     ident: ($) => /[a-zA-Z_]\w*/,
-    func_name: ($) => alias($.ident, $.function_ident),
-    typing: ($) => seq(":", choice($.ident, $.func_type)),
-    func_type: ($) => seq("(", $.params, ")", optional($.typing)),
+    typing: ($) => seq(":", choice($.ident, $.func_signature)),
+    func_signature: ($) => seq($.params, $.typing),
+    params: ($) =>
+      seq("(", optional(seq($.ident, optional(seq(",", $.ident)))), ")"),
 
     // =======================================================
     // literals
@@ -165,7 +163,7 @@ module.exports = grammar({
         seq(
           "'",
           repeat(
-            choice(token.immediate(prec(1, /[^\\"\n]+/)), $.escape_sequence)
+            choice(token.immediate(prec(1, /[^\\'\n]+/)), $.escape_sequence)
           ),
           "'"
         ),
