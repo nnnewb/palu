@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from palu.core.ast.expr import Expr, TypedIdent
 from typing import Optional, Sequence
 
 
@@ -13,39 +14,39 @@ class EmptyStatement(Statement):
 
 
 class DeclareStatement(Statement):
-    def __init__(self, typed_ident) -> None:
+    def __init__(self, typed_ident: TypedIdent, initial_value: Expr) -> None:
         super().__init__()
         self.typed_ident = typed_ident
+        self.initial_value = initial_value
 
 
 class ExternalStatement(Statement):
-    def __init__(self, typed_ident) -> None:
+    def __init__(self, typed_ident: TypedIdent) -> None:
         super().__init__()
         self.typed_ident = typed_ident
 
 
 class WhileLoop(Statement):
-    def __init__(self, condition) -> None:
+    def __init__(self, condition: Expr, statements: Sequence[Statement]) -> None:
         super().__init__()
         self.condition = condition
-        self.body: Sequence[Statement] = []
+        self.body: Sequence[Statement] = statements
 
 
 class IfBranch(Statement):
-    def __init__(self, condition, else_branch) -> None:
+    def __init__(self, condition: Expr, statements: Sequence[Statement]) -> None:
         super().__init__()
         self.condition = condition
-        self.body: Sequence[Statement] = []
-        self.else_branch: Optional[ElseBranch] = else_branch
+        self.body: Sequence[Statement] = statements
 
 
 class ElseBranch(Statement):
-    def __init__(self) -> None:
+    def __init__(self, statements: Sequence[Statement]) -> None:
         super().__init__()
-        self.body: Sequence[Statement] = []
+        self.body: Sequence[Statement] = statements
 
 
 class ReturnStatement(Statement):
-    def __init__(self, expr) -> None:
+    def __init__(self, expr: Expr) -> None:
         super().__init__()
         self.expr = expr

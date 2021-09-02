@@ -1,3 +1,4 @@
+from palu.core.ast.transformer import Transformer
 from tree_sitter import Language, Parser as TSParser
 
 lang_lib = 'build/palu.dll'
@@ -30,6 +31,7 @@ class Parser(object):
         self._parser = TSParser()
         self._parser.set_language(palu)
         self._source = TextDocument('', '')
+        self._transformer = Transformer()
 
     def parse(self, filename: str, source: str):
         self._source = TextDocument(filename, source)
@@ -37,6 +39,10 @@ class Parser(object):
         self.validate_recursive(tree.root_node)
 
         return tree
+
+    def parse_ast(self, filename, source):
+        tree = self.parse(filename, source)
+        self._transformer.transform(source, tree)
 
     def validate_recursive(self, node):
         if node.has_error or node.is_missing:

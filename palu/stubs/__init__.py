@@ -8,7 +8,7 @@ import tree_sitter
 class Node:
     """A syntax node"""
 
-    def walk(self) -> TreeCursor:
+    def walk(self) -> 'TreeCursor':
         """Get a tree cursor for walking the tree starting at this node."""
         ...
 
@@ -16,11 +16,11 @@ class Node:
         """Get an S-expression representing the node."""
         ...
 
-    def child_by_field_id(self, id: int) -> Optional[Node]:
+    def child_by_field_id(self, id: int) -> Optional['Node']:
         """Get child for the given field id."""
         ...
 
-    def child_by_field_name(self, name: str) -> Optional[Node]:
+    def child_by_field_name(self, name: str) -> Optional['Node']:
         """Get child for the given field name."""
         ...
 
@@ -70,7 +70,7 @@ class Node:
         ...
 
     @property
-    def children(self) -> List[Node]:
+    def children(self) -> List['Node']:
         """The node's children"""
         ...
 
@@ -85,27 +85,27 @@ class Node:
         ...
 
     @property
-    def next_sibling(self) -> Optional[Node]:
+    def next_sibling(self) -> Optional['Node']:
         """The node's next sibling"""
         ...
 
     @property
-    def prev_sibling(self) -> Optional[Node]:
+    def prev_sibling(self) -> Optional['Node']:
         """The node's previous sibling"""
         ...
 
     @property
-    def next_named_sibling(self) -> Optional[Node]:
+    def next_named_sibling(self) -> Optional['Node']:
         """The node's next named sibling"""
         ...
 
     @property
-    def prev_named_sibling(self) -> Optional[Node]:
+    def prev_named_sibling(self) -> Optional['Node']:
         """The node's previous named sibling"""
         ...
 
     @property
-    def parent(self) -> Optional[Node]:
+    def parent(self) -> Optional['Node']:
         """The node's parent"""
         ...
 
@@ -113,7 +113,7 @@ class Node:
 class Tree:
     """A Syntax Tree"""
 
-    def walk(self) -> TreeCursor:
+    def walk(self) -> 'TreeCursor':
         """Get a tree cursor for walking this tree."""
         ...
 

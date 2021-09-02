@@ -9,7 +9,10 @@ while True:
     inp = prompt('REPL => ')
     try:
         result = parser.parse('repl', inp)
+        print('?> {}'.format(result.root_node.sexp()))
+
+        parser.parse_ast('repl', inp)
     except PaluSyntaxError as e:
         print(f'syntax error at {e.line}:{e.column}')
-    else:
-        print('?> {}'.format(result.root_node.sexp()))
+    except NotImplementedError as e:
+        pass

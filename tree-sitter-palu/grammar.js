@@ -120,8 +120,7 @@ module.exports = grammar({
       seq("(", optional(seq($.expr, optional(repeat(seq(",", $.expr))))), ")"),
 
     // let ident [: type_ident] [= expr]
-    declare: ($) =>
-      seq("let", $.typed_ident, optional(seq("=", $.expr))),
+    declare: ($) => seq("let", $.typed_ident, optional(seq("=", $.expr))),
 
     // external ident : type
     external: ($) => seq("external", $.typed_ident),
@@ -146,9 +145,10 @@ module.exports = grammar({
     // =======================================================
     ident: ($) => /[a-zA-Z_]\w*/,
     typed_ident: ($) => seq($.ident, $.typing),
-    typing: ($) => seq(":", choice($.ident, $.func_signature)),
+    typing: ($) => seq(":", choice($.ident_expr, $.func_signature)),
     func_signature: ($) => seq($.params, $.typing),
-    params: ($) => seq("(", seq($.typed_ident, optional(seq(",", $.typed_ident))), ")"),
+    params: ($) =>
+      seq("(", seq($.typed_ident, optional(seq(",", $.typed_ident))), ")"),
 
     // =======================================================
     // literals

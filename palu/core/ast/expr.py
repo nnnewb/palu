@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from enum import Enum
+from palu import stubs
 from typing import Sequence
 
 
@@ -85,6 +86,12 @@ class LambdaExpr(Expr):
         self.statements = statements
 
 
+class ParenthesizedExpr(Expr):
+    def __init__(self, expr: Expr) -> None:
+        super().__init__()
+        self.expr = expr
+
+
 class NumberLiteral(Expr):
     def __init__(self, text: str) -> None:
         super().__init__()
@@ -98,9 +105,9 @@ class StringLiteral(Expr):
 
 
 class BooleanLiteral(Expr):
-    def __init__(self, text) -> None:
+    def __init__(self, node: stubs.Node) -> None:
         super().__init__()
-        self.value = True if text == 'true' else False
+        self.value = True if node.type == 'true' else False
 
 
 class NullLiteral(Expr):
