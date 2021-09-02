@@ -110,3 +110,9 @@ venv.bak/
 # PLY
 parsetab.py
 parser.out
+
+tree-sitter-palu/*
+!tree-sitter-palu/grammar.js
+!tree-sitter-palu/package.json
+!tree-sitter-palu/package-lock.json
+!tree-sitter-palu/jsconfig.json

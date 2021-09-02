@@ -7,7 +7,7 @@ from palu.core.lex.rules import tokens
 from palu.core.ast import ASTNode, ASTType, Identifier
 
 tokens = tokens
-start = 'stmt'
+start = 'source_file'
 
 precedence = (
     ('left', 'OP_ASSIGN'),
@@ -19,6 +19,19 @@ precedence = (
 )
 
 logger = getLogger('palu.core.syntax.rules')
+
+
+def p_source_file(p: YaccProduction):
+    """ source_file : stmt_
+                    | empty
+        stmt_ : stmt stmt_
+            | empty
+    """
+
+
+def p_repeated_stmt(p: YaccProduction):
+    ''' r_stmt : stmt r_stmt
+    '''
 
 
 def p_empty(p: YaccProduction):

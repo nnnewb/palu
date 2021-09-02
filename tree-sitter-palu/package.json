@@ -1,0 +1,15 @@
+{
+  "name": "tree-sitter-palu",
+  "version": "0.1.0",
+  "description": "tree-sitter palu",
+  "main": "bindings/node",
+  "scripts": {
+    "generate": "tree-sitter generate"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.15.0",
+    "tree-sitter-cli": "^0.20.0"
+  }
+}
