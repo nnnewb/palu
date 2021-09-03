@@ -79,10 +79,9 @@ class Transpiler(metaclass=ABCMeta):
         body = '\n'.join(statements)
 
         return dedent(f'''\
-            while({self.transpile(node.condition)}) {{
-            {indent(body, "    ")}
-            }}
-        ''')
+        while({self.transpile(node.condition)}) {{
+        {indent(body, "    ")}
+        }}''')
 
     def transpile_if_stmt(self, node: IfBranch):
         condition = self.transpile(node.condition)
@@ -104,8 +103,7 @@ class Transpiler(metaclass=ABCMeta):
         {indent(consequence_body,"    ")}
         }} else {{
         {indent(alternative_body,"    ")}
-        }}
-        ''')
+        }}''')
 
     def transpile_return_stmt(self, node: ReturnStatement):
         returns = self.transpile(node.expr)
@@ -124,10 +122,9 @@ class Transpiler(metaclass=ABCMeta):
         func_body = '\n'.join(statements)
 
         return dedent(f'''\
-            {self.transpile(node.returns)} {node.func_name}({",".join(params)}) {{
-            {indent(func_body,"    ")}
-            }}
-        ''')
+        {self.transpile(node.returns)} {node.func_name}({",".join(params)}) {{
+        {indent(func_body, "    ")}
+        }}''')
 
     def transpile_type_alias_stmt(self, node: TypeAliasStatement):
         ident = node.ident
