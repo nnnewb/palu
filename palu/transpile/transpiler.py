@@ -1,14 +1,13 @@
 from abc import ABCMeta
 from textwrap import dedent, indent
 
-from palu.core.ast.node import (
+from palu.core.ast import (
     ASTNode,
     BinaryExpr,
     BooleanLiteral,
     CallExpr,
     ConditionExpr,
     DeclareStatement,
-    ExternalStatement,
     Func,
     IdentExpr,
     IfBranch,
@@ -32,13 +31,13 @@ class Transpiler(metaclass=ABCMeta):
         if isinstance(node, DeclareStatement):
             return self.transpile_declare_stmt(node) + semi_sym
         elif isinstance(node, WhileLoop):
-            return self.transpile_while_stmt(node) 
+            return self.transpile_while_stmt(node)
         elif isinstance(node, IfBranch):
-            return self.transpile_if_stmt(node) 
+            return self.transpile_if_stmt(node)
         elif isinstance(node, ReturnStatement):
             return self.transpile_return_stmt(node) + semi_sym
         elif isinstance(node, Func):
-            return self.transpile_func_stmt(node) 
+            return self.transpile_func_stmt(node)
         elif isinstance(node, TypeAliasStatement):
             return self.transpile_type_alias_stmt(node) + semi_sym
         elif isinstance(node, IdentExpr):

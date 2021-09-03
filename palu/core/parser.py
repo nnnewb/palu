@@ -1,7 +1,7 @@
 from typing import Sequence
 from palu import stubs
-from palu.core.ast.transformer import Transformer
-from palu.core.ast.node import ASTNode
+from palu.core.transformer import Transformer
+from palu.core.ast import ASTNode
 from tree_sitter import Language, Parser as TSParser
 
 lang_lib = 'build/palu.dll'

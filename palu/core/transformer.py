@@ -1,9 +1,7 @@
-from os import altsep
 from typing import Sequence
-from typing_extensions import TypeAlias
 
 from palu import stubs
-from palu.core.ast.node import (
+from palu.core.ast import (
     ASTNode,
     BinaryExpr,
     BinaryOp,
