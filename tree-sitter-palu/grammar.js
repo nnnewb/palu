@@ -27,7 +27,16 @@ module.exports = grammar({
   rules: {
     source_file: ($) => repeat(choice($.stmt)),
     stmt: ($) =>
-      choice($.empty, $.declare, $.external, $.expr, $.while, $.if, $.return),
+      choice(
+        $.empty,
+        $.declare,
+        $.external,
+        $.expr,
+        $.while,
+        $.if,
+        $.return,
+        $.type_alias
+      ),
     empty: ($) => ";",
     expr: ($) =>
       choice(
@@ -44,7 +53,7 @@ module.exports = grammar({
         $.false_lit,
         $.null_lit
       ),
-    parenthesized_expr: ($) => seq("(", $.expr, ")"),
+    parenthesized_expr: ($) => seq("(", field("expr", $.expr), ")"),
 
     ident_expr: ($) =>
       prec(PREC.FIELD, seq($.ident, optional(repeat(seq(".", $.ident))))),
@@ -150,6 +159,14 @@ module.exports = grammar({
     // do stmt [...stmt] end
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),
 
+    type_alias: ($) =>
+      seq(
+        "type",
+        field("ident", $.ident),
+        "=",
+        field("typing", choice($.ident_expr, $.func_signature))
+      ),
+
     // =======================================================
     // identifier
     // =======================================================
@@ -157,8 +174,7 @@ module.exports = grammar({
     typed_ident: ($) =>
       seq(
         field("ident", $.ident),
-        ":",
-        field("typing", choice($.ident_expr, $.func_signature))
+        optional(seq(":", field("typing", $.ident_expr)))
       ),
     func_signature: ($) =>
       seq(

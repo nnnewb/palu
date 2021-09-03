@@ -56,11 +56,11 @@ class WhileLoop(ASTNode):
 
 
 class IfBranch(ASTNode):
-    def __init__(self, condition: ASTNode, consequence: Sequence[ASTNode], alternative: Sequence[ASTNode]) -> None:
+    def __init__(self, condition: ASTNode, consequence: Sequence[ASTNode], alternative: Optional[Sequence[ASTNode]]) -> None:
         super().__init__()
         self.condition = condition
-        self.consequence: Sequence[ASTNode] = consequence
-        self.alternative: Sequence[ASTNode] = alternative
+        self.consequence = consequence
+        self.alternative = alternative
 
     @property
     def s_expr(self) -> str:
@@ -70,8 +70,9 @@ class IfBranch(ASTNode):
         for stmt in self.consequence:
             consequence.append(stmt.s_expr)
 
-        for stmt in self.alternative:
-            alternative.append(stmt.s_expr)
+        if self.alternative:
+            for stmt in self.alternative:
+                alternative.append(stmt.s_expr)
 
         return f'(if {self.condition.s_expr} ({" ".join(consequence)}) ({" ".join(alternative)}))'
 
@@ -84,6 +85,17 @@ class ReturnStatement(ASTNode):
     @property
     def s_expr(self) -> str:
         return f'(return {self.expr.s_expr})'
+
+
+class TypeAliasStatement(ASTNode):
+    def __init__(self, ident: str, typing: Union['IdentExpr', 'FunctionSignature']) -> None:
+        super().__init__()
+        self.ident = ident
+        self.typing = typing
+
+    @property
+    def s_expr(self) -> str:
+        return f'(define-type-alias {self.ident} ({self.typing.s_expr}))'
 
 
 class IdentExpr(ASTNode):
@@ -233,9 +245,9 @@ class StringLiteral(ASTNode):
 
 
 class BooleanLiteral(ASTNode):
-    def __init__(self, node: stubs.Node) -> None:
+    def __init__(self, text: str) -> None:
         super().__init__()
-        self.value = True if node.type == 'true' else False
+        self.value = True if text == 'true' else False
 
     @property
     def s_expr(self) -> str:
