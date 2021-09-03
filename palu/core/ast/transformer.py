@@ -13,10 +13,9 @@ from palu.core.ast.node import (
     DeclareStatement,
     EmptyStatement,
     ExternalStatement,
-    FunctionSignature,
+    Func,
     IdentExpr,
     IfBranch,
-    LambdaExpr,
     NullLiteral,
     NumberLiteral,
     ParenthesizedExpr,
@@ -60,6 +59,8 @@ class Transformer(object):
             return self.transform_return_stmt(real_stmt)
         elif real_stmt.type == 'type_alias':
             return self.transform_type_alias(real_stmt)
+        elif real_stmt.type == 'func':
+            return self.transform_func_stmt(real_stmt)
         elif real_stmt.type == 'expr':
             return self.transform_expr(real_stmt)
         else:
@@ -119,18 +120,7 @@ class Transformer(object):
         assert ident
         assert typing
 
-        if isinstance(typing, IdentExpr):
-            return TypeAliasStatement(
-                str(self.source[ident.start_byte:ident.end_byte], 'utf-8'),
-                self.transform_ident_expr(typing),
-            )
-        elif isinstance(typing, FunctionSignature):
-            return TypeAliasStatement(
-                str(self.source[ident.start_byte:ident.end_byte], 'utf-8'),
-                self._transform_function_signature(typing),
-            )
-        else:
-            raise Exception(f'type alias has unexpected type {typing}')
+        return TypeAliasStatement(self._extract_text(ident), self.transform_ident_expr(typing))
 
     def transform_expr(self, node: stubs.Node) -> ASTNode:
         real_expr = node.children[0]
@@ -145,8 +135,6 @@ class Transformer(object):
             return self.transform_condition_expr(real_expr)
         elif real_expr.type == 'call_expr':
             return self.transform_call_expr(real_expr)
-        elif real_expr.type == 'lambda':
-            return self.transform_lambda_expr(real_expr)
         elif real_expr.type == 'parenthesized_expr':
             return self.transform_parenthesized_expr(real_expr)
         elif real_expr.type == 'number_literal':
@@ -205,19 +193,23 @@ class Transformer(object):
 
         return CallExpr(self.transform_ident_expr(func_name), *self._transform_argument_list(args))
 
-    def transform_lambda_expr(self, node: stubs.Node):
-        signature = node.child_by_field_name('signature')
+    def transform_func_stmt(self, node: stubs.Node):
+        func_name = node.child_by_field_name('func_name')
+        params = node.child_by_field_name('params')
+        returns = node.child_by_field_name('returns')
         body = node.child_by_field_name('body')
 
-        assert signature
+        assert func_name
         assert body
+        assert params
+        assert returns
 
-        if body.type == 'expr':
-            return LambdaExpr(self._transform_function_signature(signature), self.transform_expr(body))
-        elif body.type == 'codeblock':
-            return LambdaExpr(self._transform_function_signature(signature), *self._transform_codeblock(body))
-        else:
-            raise Exception(f'unexpected body type {body.type}')
+        return Func(
+            self._extract_text(func_name),
+            self._transform_params(params),
+            self.transform_ident_expr(returns),
+            self._transform_codeblock(body)
+        )
 
     def transform_parenthesized_expr(self, node: stubs.Node):
         expr = node.child_by_field_name('expr')
@@ -250,34 +242,16 @@ class Transformer(object):
 
         ident = str(self.source[ident_node.start_byte:ident_node.end_byte], 'utf-8')
 
-        if typing.type == 'ident_expr':
-            return TypedIdent(ident, self.transform_ident_expr(typing))
-        elif typing.type == 'func_signature':
-            return TypedIdent(ident, self._transform_function_signature(typing))
-        else:
-            raise Exception(f'unexpected typing type {typing.type}')
+        return TypedIdent(ident, self.transform_ident_expr(typing))
 
     def _transform_codeblock(self, node: stubs.Node) -> Sequence[ASTNode]:
         return [*map(lambda n: self.transform_statement(n), filter(lambda n: n.is_named, node.children))]
-
-    def _transform_function_signature(self, node: stubs.Node) -> FunctionSignature:
-        params = node.child_by_field_name('params')
-        returns = node.child_by_field_name('returns')
-
-        assert params
-        assert returns
-
-        p = self._transform_params(params)
-
-        if returns.type == 'ident_expr':
-            return FunctionSignature(self.transform_ident_expr(returns), *p)
-        elif returns.type == 'func_signature':
-            return FunctionSignature(self._transform_function_signature(returns), *p)
-        else:
-            raise Exception(f'unexpected function returns type {returns.type}')
 
     def _transform_argument_list(self, node: stubs.Node) -> Sequence[ASTNode]:
         return [*map(lambda n: self.transform_expr(n), filter(lambda n: n.is_named, node.children))]
 
     def _transform_params(self, node: stubs.Node) -> Sequence[TypedIdent]:
         return [*map(lambda n: self._transform_typed_ident(n), filter(lambda n: n.is_named, node.children))]
+
+    def _extract_text(self, node: stubs.Node) -> str:
+        return str(self.source[node.start_byte:node.end_byte], 'utf-8')

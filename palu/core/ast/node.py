@@ -88,7 +88,7 @@ class ReturnStatement(ASTNode):
 
 
 class TypeAliasStatement(ASTNode):
-    def __init__(self, ident: str, typing: Union['IdentExpr', 'FunctionSignature']) -> None:
+    def __init__(self, ident: str, typing: 'IdentExpr') -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
@@ -186,7 +186,7 @@ class CallExpr(ASTNode):
 
 
 class TypedIdent(object):
-    def __init__(self, ident: str, typing: Union[IdentExpr, 'FunctionSignature']) -> None:
+    def __init__(self, ident: str, typing: IdentExpr) -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
@@ -196,22 +196,26 @@ class TypedIdent(object):
         return f'{self.ident} : {self.typing.s_expr}'
 
 
-class LambdaExpr(ASTNode):
-    def __init__(self, signature: 'FunctionSignature', *statements:  Union['ASTNode', ASTNode]) -> None:
+class Func(ASTNode):
+    def __init__(self, func_name: str, params: Sequence[TypedIdent], returns: IdentExpr, body:  Sequence[ASTNode]) -> None:
         super().__init__()
-        self.signature = signature
-        self.statements = statements
+        self.func_name = func_name
+        self.params = params
+        self.returns = returns
+        self.body = body
 
     @property
     def s_expr(self) -> str:
-        if len(self.statements) == 1 and isinstance(self.statements[0], ASTNode):
-            returns = ReturnStatement(self.statements[0])
-            return f'(lambda {self.signature.s_expr} {returns.s_expr})'
-        else:
-            statements = []
-            for stmt in self.statements:
-                statements.append(stmt.s_expr)
-            return f'(lambda {self.signature.s_expr} ({" ".join(statements)}))'
+        params = []
+        body = []
+
+        for typed_ident in self.params:
+            params.append(f'{typed_ident.ident} : {typed_ident.typing.s_expr}')
+
+        for stmt in self.body:
+            body.append(f'{stmt.s_expr}')
+
+        return f'(define {" ".join(params)} {self.returns.s_expr} ({" ".join(body)}))'
 
 
 class ParenthesizedExpr(ASTNode):
@@ -262,17 +266,3 @@ class NullLiteral(ASTNode):
     @property
     def s_expr(self) -> str:
         return 'null'
-
-
-class FunctionSignature(object):
-    def __init__(self, returns: Union[IdentExpr, 'FunctionSignature'], *params: TypedIdent) -> None:
-        super().__init__()
-        self.params = params
-        self.returns = returns
-
-    @property
-    def s_expr(self) -> str:
-        params = []
-        for p in self.params:
-            params.append(p.s_expr)
-        return f'([{" ".join(params)}]) : {self.returns.s_expr}'

@@ -45,7 +45,7 @@ module.exports = grammar({
         $.unary_expr,
         $.cond_expr,
         $.call_expr,
-        $.lambda,
+        $.func,
         $.parenthesized_expr,
         $.number_literal,
         $.string_literal,
@@ -136,10 +136,14 @@ module.exports = grammar({
     external: ($) => seq("external", field("typed_ident", $.typed_ident)),
 
     // ([ident [, ident]]): type => (codeblock | expr)
-    lambda: ($) =>
+    func: ($) =>
       seq(
-        field("signature", $.func_signature),
-        field("body", choice($.codeblock, seq("=>", $.expr)))
+        "fn",
+        field("func_name", $.ident),
+        field("params", $.params),
+        "->",
+        field("returns", $.ident_expr),
+        field("body", $.codeblock)
       ),
 
     // while expr stmt
@@ -160,12 +164,7 @@ module.exports = grammar({
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),
 
     type_alias: ($) =>
-      seq(
-        "type",
-        field("ident", $.ident),
-        "=",
-        field("typing", choice($.ident_expr, $.func_signature))
-      ),
+      seq("type", field("ident", $.ident), "=", field("typing", $.ident_expr)),
 
     // =======================================================
     // identifier
@@ -175,13 +174,6 @@ module.exports = grammar({
       seq(
         field("ident", $.ident),
         optional(seq(":", field("typing", $.ident_expr)))
-      ),
-    func_signature: ($) =>
-      seq(
-        "fn",
-        field("params", $.params),
-        "->",
-        field("returns", $.ident_expr)
       ),
     params: ($) =>
       seq(
