@@ -175,13 +175,22 @@ class Transformer(object):
             raise Exception(f'unexpected typing type {typing.children[0].type}')
 
     def _transform_codeblock(self, node: stubs.Node) -> Sequence[Statement]:
-        raise NotImplementedError()
+        return [*map(lambda n: self.transform_statement(n), node.children)]
 
     def _transform_function_signature(self, node: stubs.Node) -> FunctionSignature:
-        raise NotImplementedError()
+        params = node.child_by_field_name('params')
+        returns = node.child_by_field_name('returns')
+        p = self._transform_params(params)
+
+        if returns.type == 'ident_expr':
+            return FunctionSignature(self.transform_ident_expr(returns), *p)
+        elif returns.type == 'func_signature':
+            return FunctionSignature(self._transform_function_signature(returns), *p)
+        else:
+            raise Exception(f'unexpected function returns type {returns.type}')
 
     def _transform_argument_list(self, node: stubs.Node) -> Sequence[Expr]:
-        raise NotImplementedError()
+        return [*map(lambda n: self.transform_expr(n), node.children)]
 
     def _transform_params(self, node: stubs.Node) -> Sequence[TypedIdent]:
-        raise NotImplementedError()
+        return [*map(lambda n: self._transform_typed_ident(n), node.children)]

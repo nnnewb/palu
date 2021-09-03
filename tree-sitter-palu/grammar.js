@@ -115,7 +115,11 @@ module.exports = grammar({
       );
     },
 
-    call_expr: ($) => prec(PREC.CALL, seq($.ident_expr, $.argument_list)),
+    call_expr: ($) =>
+      prec(
+        PREC.CALL,
+        seq(field("func_name", $.ident_expr), field("args", $.argument_list))
+      ),
     argument_list: ($) =>
       seq("(", optional(seq($.expr, optional(repeat(seq(",", $.expr))))), ")"),
 
@@ -146,7 +150,8 @@ module.exports = grammar({
     ident: ($) => /[a-zA-Z_]\w*/,
     typed_ident: ($) => seq($.ident, $.typing),
     typing: ($) => seq(":", choice($.ident_expr, $.func_signature)),
-    func_signature: ($) => seq($.params, $.typing),
+    func_signature: ($) =>
+      seq(field("params", $.params), field("returns", $.typing)),
     params: ($) =>
       seq("(", seq($.typed_ident, optional(seq(",", $.typed_ident))), ")"),
 
