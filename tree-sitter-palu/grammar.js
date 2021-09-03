@@ -27,16 +27,7 @@ module.exports = grammar({
   rules: {
     source_file: ($) => repeat(choice($.stmt)),
     stmt: ($) =>
-      choice(
-        $.empty,
-        $.declare,
-        $.external,
-        $.expr,
-        $.while,
-        $.if,
-        $.else,
-        $.return
-      ),
+      choice($.empty, $.declare, $.external, $.expr, $.while, $.if, $.return),
     empty: ($) => ";",
     expr: ($) =>
       choice(
@@ -124,22 +115,37 @@ module.exports = grammar({
       seq("(", optional(seq($.expr, optional(repeat(seq(",", $.expr))))), ")"),
 
     // let ident [: type_ident] [= expr]
-    declare: ($) => seq("let", $.typed_ident, optional(seq("=", $.expr))),
+    declare: ($) =>
+      seq(
+        "let",
+        field("typed_ident", $.typed_ident),
+        "=",
+        field("initial", $.expr)
+      ),
 
     // external ident : type
-    external: ($) => seq("external", $.typed_ident),
+    external: ($) => seq("external", field("typed_ident", $.typed_ident)),
 
     // ([ident [, ident]]): type => (codeblock | expr)
-    lambda: ($) => seq($.func_signature, "=>", choice($.codeblock, $.expr)),
+    lambda: ($) =>
+      seq(
+        field("signature", $.func_signature),
+        field("body", choice($.codeblock, seq("=>", $.expr)))
+      ),
 
     // while expr stmt
-    while: ($) => seq("while", $.expr, $.codeblock),
+    while: ($) =>
+      seq("while", field("condition", $.expr), field("body", $.codeblock)),
     // if expr stmt
-    if: ($) => seq("if", $.expr, $.codeblock),
-    // else stmt
-    else: ($) => seq("else", choice($.codeblock, $.if)),
+    if: ($) =>
+      seq(
+        "if",
+        field("condition", $.expr),
+        field("consequence", $.codeblock),
+        field("alternative", optional($.codeblock))
+      ),
     // return expr
-    return: ($) => seq("return", $.expr),
+    return: ($) => seq("return", field("returns", $.expr)),
 
     // do stmt [...stmt] end
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),
@@ -148,12 +154,25 @@ module.exports = grammar({
     // identifier
     // =======================================================
     ident: ($) => /[a-zA-Z_]\w*/,
-    typed_ident: ($) => seq($.ident, $.typing),
-    typing: ($) => seq(":", choice($.ident_expr, $.func_signature)),
+    typed_ident: ($) =>
+      seq(
+        field("ident", $.ident),
+        ":",
+        field("typing", choice($.ident_expr, $.func_signature))
+      ),
     func_signature: ($) =>
-      seq(field("params", $.params), field("returns", $.typing)),
+      seq(
+        "fn",
+        field("params", $.params),
+        "->",
+        field("returns", $.ident_expr)
+      ),
     params: ($) =>
-      seq("(", seq($.typed_ident, optional(seq(",", $.typed_ident))), ")"),
+      seq(
+        "(",
+        choice("void", seq($.typed_ident, optional(seq(",", $.typed_ident)))),
+        ")"
+      ),
 
     // =======================================================
     // literals

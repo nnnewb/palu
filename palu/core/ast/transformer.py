@@ -1,14 +1,30 @@
 from typing import Sequence
 
 from palu import stubs
-from palu.core.ast.expr import (BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
-                                ConditionExpr, Expr, IdentExpr, LambdaExpr,
-                                NullLiteral, NumberLiteral, ParenthesizedExpr,
-                                StringLiteral, TypedIdent, UnaryExpr, UnaryOp)
-from palu.core.ast.stmt import (DeclareStatement, ElseBranch,
-                                ExternalStatement, IfBranch, ReturnStatement,
-                                Statement, WhileLoop)
-from palu.core.ast.typing import FunctionSignature
+from palu.core.ast.node import (
+    ASTNode,
+    BinaryExpr,
+    BinaryOp,
+    BooleanLiteral,
+    CallExpr,
+    ConditionExpr,
+    DeclareStatement,
+    EmptyStatement,
+    ExternalStatement,
+    FunctionSignature,
+    IdentExpr,
+    IfBranch,
+    LambdaExpr,
+    NullLiteral,
+    NumberLiteral,
+    ParenthesizedExpr,
+    ReturnStatement,
+    StringLiteral,
+    TypedIdent,
+    UnaryExpr,
+    UnaryOp,
+    WhileLoop
+)
 
 
 class Transformer(object):
@@ -16,7 +32,7 @@ class Transformer(object):
         super().__init__()
         self.source = b''
 
-    def transform(self, source: bytes, tree: stubs.Tree) -> Sequence[Statement]:
+    def transform(self, source: bytes, tree: stubs.Tree) -> Sequence[ASTNode]:
         self.source = source
         result = []
         root = tree.root_node
@@ -25,9 +41,11 @@ class Transformer(object):
 
         return result
 
-    def transform_statement(self, node: stubs.Node) -> Statement:
+    def transform_statement(self, node: stubs.Node) -> ASTNode:
         real_stmt = node.children[0]
-        if real_stmt.type == 'declare':
+        if real_stmt.type == 'empty':
+            return EmptyStatement()
+        elif real_stmt.type == 'declare':
             return self.transform_declare_stmt(real_stmt)
         elif real_stmt.type == 'external':
             return self.transform_external_stmt(real_stmt)
@@ -35,8 +53,6 @@ class Transformer(object):
             return self.transform_while_stmt(real_stmt)
         elif real_stmt.type == 'if':
             return self.transform_if_stmt(real_stmt)
-        elif real_stmt.type == 'else':
-            return self.transform_else_stmt(real_stmt)
         elif real_stmt.type == 'return':
             return self.transform_return_stmt(real_stmt)
         elif real_stmt.type == 'expr':
@@ -45,35 +61,31 @@ class Transformer(object):
             raise Exception(f'unexpected node type {node.type}')
 
     def transform_declare_stmt(self, node: stubs.Node):
-        ident = self._transform_typed_ident(node.children[0])
+        ident = self._transform_typed_ident(node.child_by_field_name('typed_ident'))
+        initial = self.transform_expr(node.child_by_field_name('initial'))
 
-        if node.child_count == 2:
-            return DeclareStatement(ident, self.transform_expr(node.children[1]))
-
-        return DeclareStatement(ident)
+        return DeclareStatement(ident, initial)
 
     def transform_external_stmt(self, node: stubs.Node):
-        return ExternalStatement(self._transform_typed_ident(node.children[0]))
+        return ExternalStatement(self._transform_typed_ident(node.child_by_field_name('typed_ident')))
 
     def transform_while_stmt(self, node: stubs.Node):
         return WhileLoop(
-            self.transform_expr(node.children[0]),
-            self._transform_codeblock(node.children[1]),
+            self.transform_expr(node.child_by_field_name('condition')),
+            self._transform_codeblock(node.child_by_field_name('body')),
         )
 
     def transform_if_stmt(self, node: stubs.Node):
         return IfBranch(
-            self.transform_expr(node.children[0]),
-            self._transform_codeblock(node.children[1]),
+            self.transform_expr(node.child_by_field_name('condition')),
+            self._transform_codeblock(node.child_by_field_name('consequence')),
+            self._transform_codeblock(node.child_by_field_name('alternative'))
         )
 
-    def transform_else_stmt(self, node: stubs.Node):
-        return ElseBranch(self._transform_codeblock(node.children[0]))
-
     def transform_return_stmt(self, node: stubs.Node):
-        return ReturnStatement(self.transform_expr(node.children[0]))
+        return ReturnStatement(self.transform_expr(node.child_by_field_name('returns')))
 
-    def transform_expr(self, node: stubs.Node) -> Expr:
+    def transform_expr(self, node: stubs.Node) -> ASTNode:
         real_expr = node.children[0]
 
         if real_expr.type == 'ident_expr':
@@ -129,25 +141,27 @@ class Transformer(object):
     def transform_call_expr(self, node: stubs.Node):
         return CallExpr(
             self.transform_ident_expr(node.children[0]),
-            self._transform_argument_list(node.children[1]),
+            *self._transform_argument_list(node.children[1]),
         )
 
     def transform_lambda_expr(self, node: stubs.Node):
-        signature = node.children[0]
-        body = node.children[1]
-        return LambdaExpr(
-            self._transform_function_signature(signature),
-            self.transform_expr(body) if body.type == 'expr' else self._transform_codeblock(body)
-        )
+        signature = node.child_by_field_name('signature')
+        body = node.child_by_field_name('body')
+        if body.type == 'expr':
+            return LambdaExpr(self._transform_function_signature(signature), self.transform_expr(body))
+        elif body.type == 'codeblock':
+            return LambdaExpr(self._transform_function_signature(signature), *self._transform_codeblock(body))
+        else:
+            raise Exception(f'unexpected body type {body.type}')
 
     def transform_parenthesized_expr(self, node: stubs.Node):
         return ParenthesizedExpr(self.transform_expr(node.children[0]))
 
     def transform_number_literal(self, node: stubs.Node):
-        return NumberLiteral(str(self.source[node.start_byte:node.end_byte]))
+        return NumberLiteral(str(self.source[node.start_byte:node.end_byte], 'utf-8'))
 
     def transform_string_literal(self, node: stubs.Node):
-        return StringLiteral(str(self.source[node.start_byte:node.end_byte]))
+        return StringLiteral(str(self.source[node.start_byte:node.end_byte], 'utf-8'))
 
     def transform_true_lit(self, node: stubs.Node) -> BooleanLiteral:
         return BooleanLiteral(node)
@@ -159,23 +173,20 @@ class Transformer(object):
         return NullLiteral()
 
     def _transform_typed_ident(self, node: stubs.Node) -> TypedIdent:
-        typing = node.children[1]
-        if typing.children[0].type == 'ident_expr':
-            type_ident = typing.children[0]
-            return TypedIdent(
-                node.children[0],
-                IdentExpr(*map(lambda n: str(self.source[n.start_byte:n.end_byte]), type_ident.children))
-            )
-        elif typing.children[0].type == 'func_signature':
-            return TypedIdent(
-                node.children[0],
-                self._transform_function_signature(typing.children[0]),
-            )
-        else:
-            raise Exception(f'unexpected typing type {typing.children[0].type}')
+        ident_node = node.child_by_field_name('ident')
+        typing = node.child_by_field_name('typing')
 
-    def _transform_codeblock(self, node: stubs.Node) -> Sequence[Statement]:
-        return [*map(lambda n: self.transform_statement(n), node.children)]
+        ident = str(self.source[ident_node.start_byte:ident_node.end_byte], 'utf-8')
+
+        if typing.type == 'ident_expr':
+            return TypedIdent(ident, self.transform_ident_expr(typing))
+        elif typing.type == 'func_signature':
+            return TypedIdent(ident, self._transform_function_signature(typing))
+        else:
+            raise Exception(f'unexpected typing type {typing.type}')
+
+    def _transform_codeblock(self, node: stubs.Node) -> Sequence[ASTNode]:
+        return [*map(lambda n: self.transform_statement(n), filter(lambda n: n.is_named, node.children))]
 
     def _transform_function_signature(self, node: stubs.Node) -> FunctionSignature:
         params = node.child_by_field_name('params')
@@ -189,8 +200,8 @@ class Transformer(object):
         else:
             raise Exception(f'unexpected function returns type {returns.type}')
 
-    def _transform_argument_list(self, node: stubs.Node) -> Sequence[Expr]:
-        return [*map(lambda n: self.transform_expr(n), node.children)]
+    def _transform_argument_list(self, node: stubs.Node) -> Sequence[ASTNode]:
+        return [*map(lambda n: self.transform_expr(n), filter(lambda n: n.is_named, node.children))]
 
     def _transform_params(self, node: stubs.Node) -> Sequence[TypedIdent]:
-        return [*map(lambda n: self._transform_typed_ident(n), node.children)]
+        return [*map(lambda n: self._transform_typed_ident(n), filter(lambda n: n.is_named, node.children))]
