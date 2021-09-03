@@ -1,64 +1,30 @@
 # palu
 
-palu is toy programing language interpreter writing by Python and [PLY](https://github.com/dabeaz/ply).
+palu is toy programing language interpreter writing by Python and [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
 
-internal presentation just like scheme.
+## compiler features
 
-## mile stone
+- [x] intermediate ast structure
+- [x] very basic transpiler
+- [ ] type checker
+- [ ] optimizer
 
-- [X] simple binary expr syntax
-- [X] function call syntax
-- [X] branches/loop syntax
-- [X] user function syntax
-- [ ] AST execute
-- [ ] builtin function
-- [ ] maybe something else...? I don't known.
-- [ ] module
-- [ ] AOT/JIT compile support (try LLVM)
+## language features
 
-## example
+- [x] variable in scalar type
+- [x] if
+- [x] else
+- [x] while
+- [x] fn
+- [ ] slice(array?)
+- [ ] pointer
 
-### 1. binary expression
+## try it!
 
-```
-REPL => (S(t0+deltaT)-S(t0))/deltaT
-?> (/ (- (S (+ t0 deltaT)) (S t0)) deltaT)
-```
+let's have a try!
 
-### 2. function call
-
-```
-REPL => sqrt(abs(2*2)+abs(2*2))
-?> (sqrt (+ (abs (* 2 2)) (abs (* 2 2))))
-```
-
-### 3. branches
-
-```
-REPL => if dividend then
-            divisor/dividend
-        else
-            print('dividend should not be zero')
-        end
-?> (if dividend (then (/ divisor dividend)) (else (print 'dividend should not be zero')))
-```
-
-### 4. user function
-
-```
-REPL => def fib(n)
-            if n == 0 or n == 1 then
-                return n
-            else
-                return fib(n - 1) + fib(n - 2)
-            end
-        end
-?> (define fib (parameters 'n')
-        (if (or (== n 0) (== n 1)) 
-        (then 
-            (return n)) 
-        (else 
-            (return 
-                (+ (fib (- n 1)) 
-                   (fib (- n 2)))))))
+```bash
+python -m palu test/fibonacci.palu -o fibonacci.c
+gcc fibonacci.c -o fib
+./fib
 ```
