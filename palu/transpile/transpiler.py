@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import Sequence
+from textwrap import dedent, indent
 
 from palu.core.ast.node import (
     ASTNode,
@@ -18,7 +18,6 @@ from palu.core.ast.node import (
     ReturnStatement,
     StringLiteral,
     TypeAliasStatement,
-    TypedIdent,
     UnaryExpr,
     WhileLoop
 )
@@ -79,11 +78,11 @@ class Transpiler(metaclass=ABCMeta):
 
         body = '\n'.join(statements)
 
-        return f'''\
+        return dedent(f'''\
             while({self.transpile(node.condition)}) {{
-                {body}
+            {indent(body, "    ")}
             }}
-        '''
+        ''')
 
     def transpile_if_stmt(self, node: IfBranch):
         condition = self.transpile(node.condition)
@@ -100,13 +99,13 @@ class Transpiler(metaclass=ABCMeta):
         alternative_body = '\n'.join(alternative)
         consequence_body = '\n'.join(consequence)
 
-        return f'''\
-            if({condition}) {{
-                {consequence_body}
-            }} else {{
-                {alternative_body}
-            }}
-        '''
+        return dedent(f'''\
+        if({condition}) {{
+        {indent(consequence_body,"    ")}
+        }} else {{
+        {indent(alternative_body,"    ")}
+        }}
+        ''')
 
     def transpile_return_stmt(self, node: ReturnStatement):
         returns = self.transpile(node.expr)
@@ -124,11 +123,11 @@ class Transpiler(metaclass=ABCMeta):
 
         func_body = '\n'.join(statements)
 
-        return f'''\
+        return dedent(f'''\
             {self.transpile(node.returns)} {node.func_name}({",".join(params)}) {{
-                {func_body}
+            {indent(func_body,"    ")}
             }}
-        '''
+        ''')
 
     def transpile_type_alias_stmt(self, node: TypeAliasStatement):
         ident = node.ident

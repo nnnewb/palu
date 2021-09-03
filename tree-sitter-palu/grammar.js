@@ -35,6 +35,7 @@ module.exports = grammar({
         $.while,
         $.if,
         $.return,
+        $.func,
         $.type_alias
       ),
     empty: ($) => ";",
@@ -45,7 +46,6 @@ module.exports = grammar({
         $.unary_expr,
         $.cond_expr,
         $.call_expr,
-        $.func,
         $.parenthesized_expr,
         $.number_literal,
         $.string_literal,
