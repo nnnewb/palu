@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from textwrap import dedent, indent
+from typing import List
 
 from palu.ast import (
     ASTNode,
@@ -17,6 +18,7 @@ from palu.ast import (
     NumberLiteral,
     ParenthesizedExpr,
     ReturnStatement,
+    SourceFile,
     StringLiteral,
     TypeAliasStatement,
     UnaryExpr,
@@ -30,6 +32,8 @@ class Transpiler(metaclass=ABCMeta):
 
     def transpile(self, node: ASTNode, semi=True):
         semi_sym = ';' if semi else ''
+        if isinstance(node, SourceFile):
+            return self.transpile_source_file(node)
         if isinstance(node, DeclareStatement):
             return self.transpile_declare_stmt(node) + semi_sym
         elif isinstance(node, WhileLoop):
@@ -68,6 +72,14 @@ class Transpiler(metaclass=ABCMeta):
             return self.transpile_mod_declare(node)
         else:
             raise Exception(f'unexpected ast node {node}')
+
+    def transpile_source_file(self, node: SourceFile):
+        result: List[str] = []
+
+        for stmt in node.statements:
+            result.append(self.transpile(stmt))
+
+        return '\n'.join(result)
 
     def transpile_mod_declare(self, node: ModDeclare):
         return f'// mod {node.name}'

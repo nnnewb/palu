@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
 from typing import Optional, Sequence, Union
 
@@ -24,6 +24,25 @@ class ASTNode(metaclass=ABCMeta):
     @abstractproperty
     def s_expr(self) -> str:
         ...
+
+
+class SourceFile(ASTNode):
+    def __init__(self, statements: Sequence[ASTNode]) -> None:
+        super().__init__()
+        self.mod = ''
+        self.statements = statements
+
+        for stmt in self.statements:
+            if isinstance(stmt, ModDeclare):
+                self.mod = stmt.name
+
+    @property
+    def s_expr(self) -> str:
+        statements = []
+        for stmt in self.statements:
+            statements.append(stmt.s_expr)
+
+        return '\n'.join(statements)
 
 
 class EmptyStatement(ASTNode):

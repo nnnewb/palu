@@ -4,8 +4,8 @@ from tree_sitter import Language
 from tree_sitter import Parser as TSParser
 
 from palu import stubs
-from palu.ast import ASTNode
-from palu.transformer import Transformer
+from palu.ast import ASTNode, SourceFile
+from palu.transform import transform
 
 lang_lib = 'build/palu.dll'
 
@@ -21,26 +21,19 @@ class PaluSyntaxError(Exception):
         self.column = column
 
 
-class Parser(object):
-    def __init__(self) -> None:
-        super().__init__()
-        self._parser = TSParser()
-        self._parser.set_language(palu)
-        self._transformer = Transformer()
+_parser: stubs.Parser = TSParser()
+_parser.set_language(palu)
 
-    def parse(self, source: bytes) -> stubs.Tree:
-        tree: stubs.Tree = self._parser.parse(source)
-        self.validate_recursive(tree, tree.root_node)
 
-        return tree
+def _validate_recursive(tree: stubs.Tree, node: stubs.Node):
+    if node.has_error or node.is_missing:
+        raise PaluSyntaxError(tree, *node.start_point)
 
-    def parse_ast(self, source: bytes) -> Sequence[ASTNode]:
-        tree = self.parse(source)
-        return self._transformer.transform(source, tree)
+    for child in node.children:
+        _validate_recursive(tree, child)
 
-    def validate_recursive(self, tree: stubs.Tree, node: stubs.Node):
-        if node.has_error or node.is_missing:
-            raise PaluSyntaxError(tree, *node.start_point)
 
-        for child in node.children:
-            self.validate_recursive(tree, child)
+def parse(source: bytes) -> SourceFile:
+    tree = _parser.parse(source)
+    _validate_recursive(tree, tree.root_node)
+    return transform(tree, source)
