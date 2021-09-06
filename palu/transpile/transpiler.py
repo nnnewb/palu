@@ -8,6 +8,7 @@ from palu.core.ast import (
     CallExpr,
     ConditionExpr,
     DeclareStatement,
+    ExternalStatement,
     Func,
     IdentExpr,
     IfBranch,
@@ -60,14 +61,16 @@ class Transpiler(metaclass=ABCMeta):
             return self.transpile_boolean_literal(node) + semi_sym
         elif isinstance(node, NullLiteral):
             return self.transpile_null_literal(node) + semi_sym
+        elif isinstance(node, ExternalStatement):
+            return self.transpile_external_stmt(node)
         else:
             raise Exception(f'unexpected ast node {node}')
 
     def transpile_declare_stmt(self, node: DeclareStatement):
         return f'{self.transpile_ident_expr(node.typed_ident.typing)} {node.typed_ident.ident}'
 
-    def transpile_external_stmt(self, node):
-        raise NotImplementedError()
+    def transpile_external_stmt(self, node: ExternalStatement):
+        return f'// {node.s_expr}'
 
     def transpile_while_stmt(self, node: WhileLoop):
         statements = []

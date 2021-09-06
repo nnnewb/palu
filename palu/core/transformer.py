@@ -23,7 +23,8 @@ from palu.core.ast import (
     TypedIdent,
     UnaryExpr,
     UnaryOp,
-    WhileLoop
+    WhileLoop,
+    FuncDecl
 )
 
 
@@ -77,11 +78,25 @@ class Transformer(object):
         return DeclareStatement(ident, initial_value)
 
     def transform_external_stmt(self, node: stubs.Node):
-        typed_ident = node.child_by_field_name('typed_ident')
+        real_stmt = node.children[0]
+        if real_stmt.type == 'external_variable':
+            typed_ident = real_stmt.child_by_field_name('typed_ident')
+            assert typed_ident
+            return ExternalStatement(self._transform_typed_ident(typed_ident))
+        elif real_stmt.type == 'external_function':
+            func_name_node = real_stmt.child_by_field_name('func_name')
+            assert func_name_node
+            func_name = self._extract_text(func_name_node)
 
-        assert typed_ident
+            params_node = real_stmt.child_by_field_name('params')
+            assert params_node
+            params = self._transform_params(params_node)
 
-        return ExternalStatement(self._transform_typed_ident(typed_ident))
+            returns_node = real_stmt.child_by_field_name('returns')
+            assert returns_node
+            returns = self.transform_ident_expr(returns_node)
+
+            return ExternalStatement(FuncDecl(func_name, params, returns))
 
     def transform_while_stmt(self, node: stubs.Node):
         condition = node.child_by_field_name('condition')

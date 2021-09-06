@@ -2,7 +2,22 @@ from abc import ABCMeta, abstractproperty
 from enum import Enum
 from typing import Sequence, Union, Optional
 
-from palu import stubs
+
+class FuncDecl(object):
+    def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr') -> None:
+        super().__init__()
+        self.func_name = func_name
+        self.params = params
+        self.returns = returns
+
+    @property
+    def s_expr(self) -> str:
+        params = []
+
+        for typed_ident in self.params:
+            params.append(f'{typed_ident.ident} : {typed_ident.typing.s_expr}')
+
+        return f'(declare {self.func_name} {" ".join(params)} {self.returns.s_expr})'
 
 
 class ASTNode(metaclass=ABCMeta):
@@ -32,13 +47,13 @@ class DeclareStatement(ASTNode):
 
 
 class ExternalStatement(ASTNode):
-    def __init__(self, typed_ident: 'TypedIdent') -> None:
+    def __init__(self, external_sym: Union['TypedIdent', 'FuncDecl']) -> None:
         super().__init__()
-        self.typed_ident = typed_ident
+        self.external_sym = external_sym
 
     @property
     def s_expr(self) -> str:
-        return f'(external {self.typed_ident.s_expr})'
+        return f'(external {self.external_sym.s_expr})'
 
 
 class WhileLoop(ASTNode):
@@ -215,7 +230,7 @@ class Func(ASTNode):
         for stmt in self.body:
             body.append(f'{stmt.s_expr}')
 
-        return f'(define {" ".join(params)} {self.returns.s_expr} ({" ".join(body)}))'
+        return f'(define {self.func_name} {" ".join(params)} {self.returns.s_expr} ({" ".join(body)}))'
 
 
 class ParenthesizedExpr(ASTNode):

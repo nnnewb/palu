@@ -31,12 +31,12 @@ module.exports = grammar({
         $.empty,
         $.declare,
         $.external,
-        $.expr,
         $.while,
         $.if,
         $.return,
         $.func,
-        $.type_alias
+        $.type_alias,
+        $.expr
       ),
     empty: ($) => ";",
     expr: ($) =>
@@ -133,9 +133,19 @@ module.exports = grammar({
       ),
 
     // external ident : type
-    external: ($) => seq("external", field("typed_ident", $.typed_ident)),
+    external: ($) => choice($.external_variable, $.external_function),
+    external_variable: ($) =>
+      seq("external", field("typed_ident", $.typed_ident)),
+    external_function: ($) =>
+      seq(
+        "external",
+        "fn",
+        field("func_name", $.ident),
+        field("params", $.params),
+        "->",
+        field("returns", $.ident_expr)
+      ),
 
-    // ([ident [, ident]]): type => (codeblock | expr)
     func: ($) =>
       seq(
         "fn",

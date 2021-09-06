@@ -1,3 +1,5 @@
+external fn printf(fmt: string, n: int) -> int
+
 fn fib(n: int) -> int do
     if n == 1 do
         return 0
