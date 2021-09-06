@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from palu import stubs
-from palu.core.ast import (
+from palu.ast import (
     ASTNode,
     BinaryExpr,
     BinaryOp,
@@ -13,7 +13,8 @@ from palu.core.ast import (
     ExternalStatement,
     Func,
     IdentExpr,
-    IfBranch,
+    If,
+    ModDeclare,
     NullLiteral,
     NumberLiteral,
     ParenthesizedExpr,
@@ -62,8 +63,15 @@ class Transformer(object):
             return self.transform_func_stmt(real_stmt)
         elif real_stmt.type == 'expr':
             return self.transform_expr(real_stmt)
+        elif real_stmt.type == 'mod':
+            return self.transform_mod(real_stmt)
         else:
-            raise Exception(f'unexpected node type {node.type}')
+            raise Exception(f'unexpected node type {real_stmt.type}')
+
+    def transform_mod(self, node: stubs.Node):
+        ident_node = node.child_by_field_name('name')
+        assert ident_node
+        return ModDeclare(self._extract_text(ident_node))
 
     def transform_declare_stmt(self, node: stubs.Node):
         typed_ident = node.child_by_field_name('typed_ident')
@@ -115,9 +123,9 @@ class Transformer(object):
         assert condition
         assert consequence
         if alternative:
-            return IfBranch(self.transform_expr(condition), self._transform_codeblock(consequence), self._transform_codeblock(alternative))
+            return If(self.transform_expr(condition), self._transform_codeblock(consequence), self._transform_codeblock(alternative))
         else:
-            return IfBranch(self.transform_expr(condition), self._transform_codeblock(consequence), None)
+            return If(self.transform_expr(condition), self._transform_codeblock(consequence), None)
 
     def transform_return_stmt(self, node: stubs.Node):
         returns = node.child_by_field_name('returns')

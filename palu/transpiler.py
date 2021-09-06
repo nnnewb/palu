@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from textwrap import dedent, indent
 
-from palu.core.ast import (
+from palu.ast import (
     ASTNode,
     BinaryExpr,
     BooleanLiteral,
@@ -11,7 +11,8 @@ from palu.core.ast import (
     ExternalStatement,
     Func,
     IdentExpr,
-    IfBranch,
+    If,
+    ModDeclare,
     NullLiteral,
     NumberLiteral,
     ParenthesizedExpr,
@@ -33,7 +34,7 @@ class Transpiler(metaclass=ABCMeta):
             return self.transpile_declare_stmt(node) + semi_sym
         elif isinstance(node, WhileLoop):
             return self.transpile_while_stmt(node)
-        elif isinstance(node, IfBranch):
+        elif isinstance(node, If):
             return self.transpile_if_stmt(node)
         elif isinstance(node, ReturnStatement):
             return self.transpile_return_stmt(node) + semi_sym
@@ -63,8 +64,13 @@ class Transpiler(metaclass=ABCMeta):
             return self.transpile_null_literal(node) + semi_sym
         elif isinstance(node, ExternalStatement):
             return self.transpile_external_stmt(node)
+        elif isinstance(node, ModDeclare):
+            return self.transpile_mod_declare(node)
         else:
             raise Exception(f'unexpected ast node {node}')
+
+    def transpile_mod_declare(self, node: ModDeclare):
+        return f'// mod {node.name}'
 
     def transpile_declare_stmt(self, node: DeclareStatement):
         return f'{self.transpile_ident_expr(node.typed_ident.typing)} {node.typed_ident.ident}'
@@ -84,7 +90,7 @@ class Transpiler(metaclass=ABCMeta):
         {indent(body, "    ")}
         }}''')
 
-    def transpile_if_stmt(self, node: IfBranch):
+    def transpile_if_stmt(self, node: If):
         condition = self.transpile(node.condition, False)
 
         consequence = []

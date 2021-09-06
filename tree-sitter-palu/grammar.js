@@ -29,6 +29,7 @@ module.exports = grammar({
     stmt: ($) =>
       choice(
         $.empty,
+        $.mod,
         $.declare,
         $.external,
         $.while,
@@ -39,6 +40,7 @@ module.exports = grammar({
         $.expr
       ),
     empty: ($) => ";",
+    mod: ($) => seq("mod", field("name", $.ident)),
     expr: ($) =>
       choice(
         $.ident_expr,

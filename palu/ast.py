@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractproperty
 from enum import Enum
-from typing import Sequence, Union, Optional
+from typing import Optional, Sequence, Union
 
 
 class FuncDecl(object):
@@ -33,6 +33,16 @@ class EmptyStatement(ASTNode):
     @property
     def s_expr(self) -> str:
         return '()'
+
+
+class ModDeclare(ASTNode):
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self.name = name
+
+    @property
+    def s_expr(self) -> str:
+        return f'; module {self.name}'
 
 
 class DeclareStatement(ASTNode):
@@ -70,7 +80,7 @@ class WhileLoop(ASTNode):
         return f'(while {self.condition.s_expr} {" ".join(statements)})'
 
 
-class IfBranch(ASTNode):
+class If(ASTNode):
     def __init__(self, condition: ASTNode, consequence: Sequence[ASTNode], alternative: Optional[Sequence[ASTNode]]) -> None:
         super().__init__()
         self.condition = condition

@@ -3,8 +3,8 @@ import io
 import click
 from prompt_toolkit import prompt
 
-from palu.core.parser import PaluSyntaxError, Parser
-from palu.transpile.transpiler import Transpiler
+from palu.parser import PaluSyntaxError, Parser
+from palu.transpiler import Transpiler
 
 
 @click.command()
