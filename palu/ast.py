@@ -6,11 +6,12 @@ from palu.symbol import Symbol
 
 
 class FuncDecl(object):
-    def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr') -> None:
+    def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr', sym: Symbol) -> None:
         super().__init__()
         self.func_name = func_name
         self.params = params
         self.returns = returns
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:
@@ -149,9 +150,10 @@ class TypeAliasStatement(ASTNode):
 
 
 class IdentExpr(ASTNode):
-    def __init__(self, *ident: str) -> None:
+    def __init__(self, *ident: str, sym: Symbol) -> None:
         super().__init__()
         self.ident = ident
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:
@@ -221,10 +223,11 @@ class ConditionExpr(ASTNode):
 
 
 class CallExpr(ASTNode):
-    def __init__(self, ident: IdentExpr, *args: ASTNode) -> None:
+    def __init__(self, ident: IdentExpr, *args: ASTNode, fn_sym: Symbol) -> None:
         super().__init__()
         self.ident = ident
         self.args = args
+        self.fn_sym = fn_sym
 
     @property
     def s_expr(self) -> str:
@@ -248,12 +251,13 @@ class TypedIdent(object):
 
 
 class Func(ASTNode):
-    def __init__(self, func_name: str, params: Sequence[TypedIdent], returns: IdentExpr, body:  Sequence[ASTNode]) -> None:
+    def __init__(self, func_name: str, params: Sequence[TypedIdent], returns: IdentExpr, body:  Sequence[ASTNode], sym: Symbol) -> None:
         super().__init__()
         self.func_name = func_name
         self.params = params
         self.returns = returns
         self.body = body
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:

@@ -135,8 +135,14 @@ class Transpiler(metaclass=ABCMeta):
         params = []
         statements = []
 
+        assert node.sym.typing is not None
+        assert node.sym.typing.returns is not None
+        assert node.sym.typing.returns.ref is not None
+
         for param in node.params:
-            params.append(f'{".".join(param.typing.ident)} {param.ident}')
+            assert param.sym.typing is not None
+            assert param.sym.typing.ref is not None
+            params.append(f'{param.sym.typing.ref.c_type} {param.ident}')
 
         for stmt in node.body:
             statements.append(self.transpile(stmt))
@@ -144,7 +150,7 @@ class Transpiler(metaclass=ABCMeta):
         func_body = '\n'.join(statements)
 
         return dedent(f'''\
-        {self.transpile(node.returns, False)} {node.func_name}({",".join(params)}) {{
+        {node.sym.typing.returns.ref.c_type} {node.func_name}({",".join(params)}) {{
         {indent(func_body, "    ")}
         }}''')
 

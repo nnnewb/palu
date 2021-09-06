@@ -131,7 +131,7 @@ class Transformer(object):
             sym.typing = t
             parent.add_child(sym)
 
-            return ExternalStatement(FuncDecl(func_name, params, returns), sym)
+            return ExternalStatement(FuncDecl(func_name, params, returns, sym), sym)
 
     def transform_while_stmt(self, node: stubs.Node, source: bytes):
         condition = node.child_by_field_name('condition')
@@ -228,7 +228,11 @@ class Transformer(object):
             raise Exception(f'unexpected expr type {real_expr.type}')
 
     def transform_ident_expr(self, node: stubs.Node, source: bytes):
-        return IdentExpr(*map(lambda n: str(source[n.start_byte:n.end_byte], 'utf-8'), node.children))
+        assert len(self.stack) > 0
+        parent = self.stack[len(self.stack)-1]
+        ident = [*map(lambda n: self.get_text(n, source), node.children)]
+        sym = parent.resolve_full_name('.'.join(ident))
+        return IdentExpr(*ident, sym=sym)
 
     def transform_binary_expr(self, node: stubs.Node, source: bytes):
         operator = node.child_by_field_name('operator')
@@ -262,13 +266,20 @@ class Transformer(object):
         return ConditionExpr(self.transform_expr(condition, source), self.transform_expr(consequence, source), self.transform_expr(alternative, source))
 
     def transform_call_expr(self, node: stubs.Node, source: bytes):
-        func_name = node.child_by_field_name('func_name')
-        args = node.child_by_field_name('args')
+        func_name_node = node.child_by_field_name('func_name')
+        args_node = node.child_by_field_name('args')
 
-        assert func_name
-        assert args
+        assert func_name_node
+        assert args_node
 
-        return CallExpr(self.transform_ident_expr(func_name, source), *self._transform_argument_list(args, source))
+        assert len(self.stack) > 0
+        parent = self.stack[len(self.stack)-1]
+
+        func_name = self.transform_ident_expr(func_name_node, source)
+        args = self._transform_argument_list(args_node, source)
+        fn_sym = parent.resolve_full_name('.'.join(func_name.ident))
+
+        return CallExpr(func_name, *args, fn_sym=fn_sym)
 
     def transform_func_stmt(self, node: stubs.Node, source: bytes):
         func_name_node = node.child_by_field_name('func_name')
@@ -298,15 +309,16 @@ class Transformer(object):
         t = Typing.from_func_signature(parent, [*map(lambda i: '.'.join(i.typing.ident), params)], '.'.join(returns.ident))
         sym.typing = t
 
+        # 把函数符号加入 parent 以支持递归
+        parent.add_child(sym)
+
         # 解析函数体内容
         body = self._transform_codeblock(body_node, source)
 
         # 结束
         self.stack.pop()
 
-        parent.add_child(sym)
-
-        return Func(func_name, params, returns, body)
+        return Func(func_name, params, returns, body, sym)
 
     def transform_parenthesized_expr(self, node: stubs.Node, source: bytes):
         expr = node.child_by_field_name('expr')

@@ -90,7 +90,7 @@ class Symbol(object):
             raise Exception(f'{child.name} has already declared in this scope')
         self.children[child.name] = child
 
-    def resolve_name(self, name: str) -> Optional['Symbol']:
+    def resolve_name(self, name: str) -> 'Symbol':
         """resolve symbol in this scope.
 
         Returns:
@@ -109,9 +109,9 @@ class Symbol(object):
             if sym_in_parent_scope:
                 return sym_in_parent_scope
 
-        return None
+        raise Exception(f'unresolved symbol {name}')
 
-    def resolve_full_name(self, name: str) -> Optional['Symbol']:
+    def resolve_full_name(self, name: str) -> 'Symbol':
         """resolve full name of symbol in this scope.
 
         Returns:
@@ -129,12 +129,15 @@ class Symbol(object):
             if sym:
                 sym = self.resolve_name(p)
 
+        if sym is None:
+            raise Exception(f'unresolved symbol {name}')
+
         return sym
 
     @property
     def c_type(self) -> str:
         if self.kind == SymbolKind.Type:
-            return self.full_name.replace('.', '_') if self._c_type is None else self._c_type
+            return self.name if self._c_type is None else self._c_type
 
         raise Exception('only symbol of type has c_type')
 
