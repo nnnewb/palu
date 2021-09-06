@@ -116,3 +116,6 @@ tree-sitter-palu/*
 !tree-sitter-palu/package.json
 !tree-sitter-palu/package-lock.json
 !tree-sitter-palu/jsconfig.json
+
+# generated c code
+source.c
