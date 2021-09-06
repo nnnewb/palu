@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
+from palu.symbol import Symbol, SymbolKind
 from typing import Optional, Sequence, Union
 
 
@@ -55,9 +56,10 @@ class EmptyStatement(ASTNode):
 
 
 class ModDeclare(ASTNode):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, sym: Symbol) -> None:
         super().__init__()
         self.name = name
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:
@@ -65,10 +67,11 @@ class ModDeclare(ASTNode):
 
 
 class DeclareStatement(ASTNode):
-    def __init__(self, typed_ident: 'TypedIdent', initial_value: ASTNode) -> None:
+    def __init__(self, typed_ident: 'TypedIdent', initial_value: ASTNode, sym: Symbol) -> None:
         super().__init__()
         self.typed_ident = typed_ident
         self.initial_value = initial_value
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:
@@ -76,9 +79,10 @@ class DeclareStatement(ASTNode):
 
 
 class ExternalStatement(ASTNode):
-    def __init__(self, external_sym: Union['TypedIdent', 'FuncDecl']) -> None:
+    def __init__(self, external_sym: Union['TypedIdent', 'FuncDecl'], sym: Symbol) -> None:
         super().__init__()
         self.external_sym = external_sym
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:

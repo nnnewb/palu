@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence, TypedDict
 from enum import Enum
 
 
@@ -7,27 +7,43 @@ class SymbolKind(Enum):
     Type = 'type'
     Func = 'func'
     Module = 'module'
+    # pesudo symbol for scope book keeping, not actual symbol
+    Global = 'global' 
+    CodeBlock = 'codeblock'
 
 
 class Typing(object):
-    def __init__(self, is_readonly=True, is_pointer=False, underlying: 'Symbol' = None) -> None:
+    def __init__(self, ref: Optional['Symbol'] = None, params: Optional[Sequence['Typing']] = None, returns: Optional['Typing'] = None) -> None:
         super().__init__()
-        self.is_readonly = is_readonly
-        self.is_pointer = is_pointer
-        self.underlying = underlying
+        self.ref = ref
+        self.params = params
+        self.returns = returns
 
-    def assignable(self, operand: 'Typing') -> bool:
-        if self.is_readonly:
-            return False
-        elif self.is_pointer != operand.is_pointer:
-            return False
-        elif self.underlying != operand.underlying:
-            return False
-        return True
+    @staticmethod
+    def from_type_ident(env: 'Symbol', name: str) -> Optional['Typing']:
+        sym = env.resolve_full_name(name)
+        if sym:
+            return Typing(sym)
+        return None
+
+    @staticmethod
+    def from_func_signature(env: 'Symbol', params: Sequence[str], returns: str) -> Optional['Typing']:
+        resolved_params = []
+        for p in params:
+            resolved_p = env.resolve_full_name(p)
+            if not resolved_p:
+                raise Exception(f'unresolved symbol {p}')
+
+            resolved_params.append(Typing(resolved_p))
+
+        resolved_returns = env.resolve_full_name(returns)
+        if not resolved_returns:
+            raise Exception(f'unresolved symbol {returns}')
+        return Typing(None, resolved_params, Typing(resolved_returns))
 
 
 class Symbol(object):
-    def __init__(self, name: str, kind: SymbolKind, typing: Typing = None, parent: 'Symbol' = None) -> None:
+    def __init__(self, name: str, kind: SymbolKind, typing: 'Typing' = None, parent: 'Symbol' = None) -> None:
         """ symbol
 
         Args:
@@ -75,6 +91,10 @@ class Symbol(object):
         Returns:
             Optional[Symbol]: resolved symbol
         """
+        for predefined_sym in predefined:
+            if predefined_sym.name == name:
+                return predefined_sym
+
         sym_in_current_scope = self.children.get(name)
         if sym_in_current_scope:
             return sym_in_current_scope
@@ -105,6 +125,13 @@ class Symbol(object):
                 sym = self.resolve_name(p)
 
         return sym
+
+    @staticmethod
+    def resolve_predefined(name: str) -> Optional['Symbol']:
+        for predefined_sym in predefined:
+            if predefined_sym.name == name:
+                return predefined_sym
+        return None
 
 
 predefined = [
