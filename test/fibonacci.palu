@@ -1,8 +1,8 @@
 mod fib
 
-external fn printf(fmt: string, n: int) -> int
+external fn printf(fmt: string, n: i32) -> i32
 
-fn fib(n: int) -> int do
+fn fib(n: i32) -> i32 do
     if n == 1 do
         return 0
     end
@@ -14,7 +14,7 @@ fn fib(n: int) -> int do
     return fib(n-1) + fib(n-2)
 end
 
-fn main(void) -> int do
+fn main(void) -> i32 do
     printf("%d", fib(6))
     return 0
 end

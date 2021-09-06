@@ -1,7 +1,7 @@
 from typing import List, Sequence
 
 from palu import stubs
-from palu.symbol import Symbol, SymbolKind, Typing, predefined
+from palu.symbol import Symbol, SymbolKind, Typing
 from palu.ast import (
     ASTNode,
     BinaryExpr,
@@ -92,7 +92,8 @@ class Transformer(object):
         assert len(self.stack) > 0
         parent = self.stack[len(self.stack)-1]
 
-        sym = Symbol(ident.ident, SymbolKind.Var, Typing.from_type_ident(parent, '.'.join(ident.typing.ident)), parent)
+        t = Typing.from_type_ident(parent, '.'.join(ident.typing.ident))
+        sym = Symbol(ident.ident, SymbolKind.Var, t, parent)
         return DeclareStatement(ident, initial_value, sym)
 
     def transform_external_stmt(self, node: stubs.Node, source: bytes):
@@ -105,7 +106,9 @@ class Transformer(object):
             typed_ident = self._transform_typed_ident(typed_ident_node, source)
 
             typing_str = '.'.join(typed_ident.typing.ident)
-            sym = Symbol(typed_ident.ident, SymbolKind.Var, Typing.from_type_ident(parent, typing_str), parent)
+            t = Typing.from_type_ident(parent, typing_str)
+            sym = Symbol(typed_ident.ident, SymbolKind.Var, t, parent)
+            parent.add_child(sym)
             return ExternalStatement(typed_ident, sym)
         elif real_stmt.type == 'external_function':
             func_name_node = real_stmt.child_by_field_name('func_name')
@@ -114,14 +117,19 @@ class Transformer(object):
 
             params_node = real_stmt.child_by_field_name('params')
             assert params_node
+            # 预先创建 sym 来隔离 params 的作用域
+            sym = Symbol(func_name, SymbolKind.Func, None, parent)
+            self.stack.append(sym)
             params = self._transform_params(params_node, source)
+            self.stack.pop()
 
             returns_node = real_stmt.child_by_field_name('returns')
             assert returns_node
             returns = self.transform_ident_expr(returns_node, source)
 
             t = Typing.from_func_signature(parent, [*map(lambda i: '.'.join(i.typing.ident), params)], '.'.join(returns.ident))
-            sym = Symbol(func_name, SymbolKind.Func, t, parent)
+            sym.typing = t
+            parent.add_child(sym)
 
             return ExternalStatement(FuncDecl(func_name, params, returns), sym)
 
@@ -142,15 +150,30 @@ class Transformer(object):
 
     def transform_if_stmt(self, node: stubs.Node, source: bytes):
         condition = node.child_by_field_name('condition')
-        consequence = node.child_by_field_name('consequence')
-        alternative = node.child_by_field_name('alternative')
+        consequence_node = node.child_by_field_name('consequence')
+        alternative_node = node.child_by_field_name('alternative')
 
         assert condition
-        assert consequence
-        if alternative:
-            return If(self.transform_expr(condition, source), self._transform_codeblock(consequence, source), self._transform_codeblock(alternative, source))
+        assert consequence_node
+
+        # 隔离 if 代码块中的作用域
+        assert len(self.stack) > 0
+        parent = self.stack[len(self.stack)-1]
+        sym = Symbol('if-consequence', SymbolKind.CodeBlock, None, parent)
+
+        if alternative_node:
+            self.stack.append(sym)
+            consequence = self._transform_codeblock(consequence_node, source)
+            alternative = self._transform_codeblock(alternative_node, source)
+            self.stack.pop()
+
+            return If(self.transform_expr(condition, source), consequence, alternative)
         else:
-            return If(self.transform_expr(condition, source), self._transform_codeblock(consequence, source), None)
+            self.stack.append(sym)
+            consequence = self._transform_codeblock(consequence_node, source)
+            self.stack.pop()
+
+            return If(self.transform_expr(condition, source), consequence, None)
 
     def transform_return_stmt(self, node: stubs.Node, source: bytes):
         returns = node.child_by_field_name('returns')
@@ -160,13 +183,21 @@ class Transformer(object):
         return ReturnStatement(self.transform_expr(returns, source))
 
     def transform_type_alias(self, node: stubs.Node, source: bytes):
-        ident = node.child_by_field_name('ident')
-        typing = node.child_by_field_name('typing')
+        ident_node = node.child_by_field_name('ident')
+        typing_node = node.child_by_field_name('typing')
 
-        assert ident
-        assert typing
+        assert ident_node
+        assert typing_node
 
-        return TypeAliasStatement(self.get_text(ident, source), self.transform_ident_expr(typing, source))
+        ident = self.get_text(ident_node, source)
+        typing = self.transform_ident_expr(typing_node, source)
+
+        assert len(self.stack) > 0
+        parent = self.stack[len(self.stack)-1]
+        sym = Symbol(ident, SymbolKind.Type, Typing.from_type_ident(parent, '.'.join(typing.ident)), parent)
+        parent.add_child(sym)
+
+        return TypeAliasStatement(ident, typing, sym)
 
     def transform_expr(self, node: stubs.Node, source: bytes) -> ASTNode:
         real_expr = node.children[0]
@@ -240,22 +271,42 @@ class Transformer(object):
         return CallExpr(self.transform_ident_expr(func_name, source), *self._transform_argument_list(args, source))
 
     def transform_func_stmt(self, node: stubs.Node, source: bytes):
-        func_name = node.child_by_field_name('func_name')
-        params = node.child_by_field_name('params')
-        returns = node.child_by_field_name('returns')
-        body = node.child_by_field_name('body')
+        func_name_node = node.child_by_field_name('func_name')
+        params_node = node.child_by_field_name('params')
+        returns_node = node.child_by_field_name('returns')
+        body_node = node.child_by_field_name('body')
 
-        assert func_name
-        assert body
-        assert params
-        assert returns
+        assert func_name_node
+        assert body_node
+        assert params_node
+        assert returns_node
 
-        return Func(
-            self.get_text(func_name, source),
-            self._transform_params(params, source),
-            self.transform_ident_expr(returns, source),
-            self._transform_codeblock(body, source)
-        )
+        func_name = self.get_text(func_name_node, source)
+
+        assert len(self.stack) > 0, 'stack size should always greater than 0'
+        parent: Symbol = self.stack[len(self.stack)-1]
+
+        # 预先创建 sym 隔离函数参数作用域
+        sym = Symbol(func_name, SymbolKind.Func, None, parent)
+        self.stack.append(sym)
+
+        # 解析函数签名
+        params = self._transform_params(params_node, source)
+        returns = self.transform_ident_expr(returns_node, source)
+
+        # 补全符号的函数签名
+        t = Typing.from_func_signature(parent, [*map(lambda i: '.'.join(i.typing.ident), params)], '.'.join(returns.ident))
+        sym.typing = t
+
+        # 解析函数体内容
+        body = self._transform_codeblock(body_node, source)
+
+        # 结束
+        self.stack.pop()
+
+        parent.add_child(sym)
+
+        return Func(func_name, params, returns, body)
 
     def transform_parenthesized_expr(self, node: stubs.Node, source: bytes):
         expr = node.child_by_field_name('expr')
@@ -280,13 +331,22 @@ class Transformer(object):
         return NullLiteral()
 
     def _transform_typed_ident(self, node: stubs.Node, source: bytes) -> TypedIdent:
-        ident = node.child_by_field_name('ident')
-        typing = node.child_by_field_name('typing')
+        ident_node = node.child_by_field_name('ident')
+        typing_node = node.child_by_field_name('typing')
 
-        assert ident
-        assert typing
+        assert ident_node
+        assert typing_node
 
-        return TypedIdent(self.get_text(ident, source), self.transform_ident_expr(typing, source))
+        ident = self.get_text(ident_node, source)
+        typing = self.transform_ident_expr(typing_node, source)
+
+        assert len(self.stack) > 0
+        parent = self.stack[len(self.stack)-1]
+        t = Typing.from_type_ident(parent, '.'.join(typing.ident))
+        sym = Symbol(ident, SymbolKind.Var, t, parent)
+        parent.add_child(sym)
+
+        return TypedIdent(ident, typing, sym)
 
     def _transform_codeblock(self, node: stubs.Node, source: bytes) -> Sequence[ASTNode]:
         return [*map(lambda n: self.transform_statement(n, source), filter(lambda n: n.is_named, node.children))]
@@ -295,7 +355,13 @@ class Transformer(object):
         return [*map(lambda n: self.transform_expr(n, source), filter(lambda n: n.is_named, node.children))]
 
     def _transform_params(self, node: stubs.Node, source: bytes) -> Sequence[TypedIdent]:
-        return [*map(lambda n: self._transform_typed_ident(n, source), filter(lambda n: n.is_named, node.children))]
+        result = []
+        if node.named_child_count > 0:
+            for n in node.children:
+                if n.type == 'typed_ident':
+                    result.append(self._transform_typed_ident(n, source))
+
+        return result
 
     def get_text(self, node: stubs.Node, source: bytes) -> str:
         return str(source[node.start_byte:node.end_byte], 'utf-8')

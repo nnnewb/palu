@@ -1,7 +1,8 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractproperty
 from enum import Enum
-from palu.symbol import Symbol, SymbolKind
 from typing import Optional, Sequence, Union
+
+from palu.symbol import Symbol
 
 
 class FuncDecl(object):
@@ -136,10 +137,11 @@ class ReturnStatement(ASTNode):
 
 
 class TypeAliasStatement(ASTNode):
-    def __init__(self, ident: str, typing: 'IdentExpr') -> None:
+    def __init__(self, ident: str, typing: 'IdentExpr', sym: Symbol) -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
+        self.sym = sym
 
     @property
     def s_expr(self) -> str:
@@ -234,10 +236,11 @@ class CallExpr(ASTNode):
 
 
 class TypedIdent(object):
-    def __init__(self, ident: str, typing: IdentExpr) -> None:
+    def __init__(self, ident: str, typing: IdentExpr, sym: Symbol) -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
+        self.sym = sym
 
     @property
     def s_expr(self):
