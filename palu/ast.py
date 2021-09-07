@@ -283,6 +283,31 @@ class ParenthesizedExpr(ASTNode):
         return f'({self.expr.s_expr})'
 
 
+class AsssignmentOp(Enum):
+    Direct = '='
+    MulAssign = '*='
+    DivAssign = '/='
+    AddAssign = '+='
+    SubAssign = '-='
+    LSAssign = '<<='
+    RSAssign = '>>='
+    BAAssign = '&='
+    BOAssign = '|='
+    BXAssign = '^='
+
+
+class AssignmentExpr(ASTNode):
+    def __init__(self, left: IdentExpr, op: AsssignmentOp, right: ASTNode):
+        super().__init__()
+        self.left = left
+        self.right = right
+        self.op = op
+
+    @property
+    def s_expr(self) -> str:
+        return f'({self.op.value} {self.left.s_expr} {self.right.s_expr})'
+
+
 class NumberLiteral(ASTNode):
     def __init__(self, text: str) -> None:
         super().__init__()

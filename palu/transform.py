@@ -2,7 +2,7 @@ from typing import List, Sequence
 
 from tree_sitter import Node, Tree
 
-from palu.ast import (ASTNode, BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
+from palu.ast import (ASTNode, AssignmentExpr, AsssignmentOp, BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
                       ConditionExpr, DeclareStatement, EmptyStatement,
                       ExternalStatement, Func, FuncDecl, IdentExpr, If,
                       ModDeclare, NullLiteral, NumberLiteral,
@@ -195,6 +195,8 @@ class Transformer(object):
             return self.transform_call_expr(real_expr, source)
         elif real_expr.type == 'parenthesized_expr':
             return self.transform_parenthesized_expr(real_expr, source)
+        elif real_expr.type == 'assignment_expr':
+            return self.transform_assignment_expr(real_expr, source)
         elif real_expr.type == 'number_literal':
             return self.transform_number_literal(real_expr, source)
         elif real_expr.type == 'string_literal':
@@ -311,6 +313,21 @@ class Transformer(object):
         assert expr
 
         return ParenthesizedExpr(self.transform_expr(expr, source))
+
+    def transform_assignment_expr(self, node: Node, source: bytes):
+        left_node = node.child_by_field_name('left')
+        op_node = node.child_by_field_name('operator')
+        right_node = node.child_by_field_name('right')
+
+        assert left_node
+        assert op_node
+        assert right_node
+
+        op = AsssignmentOp(self.get_text(op_node, source))
+        left = self.transform_ident_expr(left_node, source)
+        right = self.transform_expr(right_node, source)
+
+        return AssignmentExpr(left, op, right)
 
     def transform_number_literal(self, node: Node, source: bytes):
         return NumberLiteral(str(source[node.start_byte:node.end_byte], 'utf-8'))

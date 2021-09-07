@@ -15,6 +15,10 @@ fn fib(n: i32) -> i32 do
 end
 
 fn main(void) -> i32 do
-    printf("%d", fib(6))
+    let n: i32 = fib(6)
+    while n < 10 do
+        n += 1
+    end
+    printf("%d", n)
     return 0
 end

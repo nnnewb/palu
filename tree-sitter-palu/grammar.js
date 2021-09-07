@@ -49,6 +49,7 @@ module.exports = grammar({
         $.cond_expr,
         $.call_expr,
         $.parenthesized_expr,
+        $.assignment_expr,
         $.number_literal,
         $.string_literal,
         $.true_lit,
@@ -56,6 +57,31 @@ module.exports = grammar({
         $.null_lit
       ),
     parenthesized_expr: ($) => seq("(", field("expr", $.expr), ")"),
+
+    assignment_expr: ($) =>
+      prec.right(
+        PREC.ASSIGNMENT,
+        seq(
+          field("left", $.ident_expr),
+          field(
+            "operator",
+            choice(
+              "=",
+              "*=",
+              "/=",
+              "%=",
+              "+=",
+              "-=",
+              "<<=",
+              ">>=",
+              "&=",
+              "^=",
+              "|="
+            )
+          ),
+          field("right", $.expr)
+        )
+      ),
 
     ident_expr: ($) =>
       prec(PREC.FIELD, seq($.ident, optional(repeat(seq(".", $.ident))))),

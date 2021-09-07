@@ -4,6 +4,7 @@ from typing import List
 
 from palu.ast import (
     ASTNode,
+    AssignmentExpr,
     BinaryExpr,
     BooleanLiteral,
     CallExpr,
@@ -58,6 +59,8 @@ class Transpiler(metaclass=ABCMeta):
             return self.transpile_call_expr(node) + semi_sym
         elif isinstance(node, ParenthesizedExpr):
             return self.transpile_parenthesized_expr(node) + semi_sym
+        elif isinstance(node, AssignmentExpr):
+            return self.transpile_assignment_expr(node) + semi_sym
         elif isinstance(node, NumberLiteral):
             return self.transpile_number_literal(node) + semi_sym
         elif isinstance(node, StringLiteral):
@@ -85,7 +88,10 @@ class Transpiler(metaclass=ABCMeta):
         return f'// mod {node.name}'
 
     def transpile_declare_stmt(self, node: DeclareStatement):
-        return f'{self.transpile_ident_expr(node.typed_ident.typing)} {node.typed_ident.ident}'
+        result = f'{node.typed_ident.typing.sym.c_type} {node.typed_ident.ident}'
+        if node.initial_value is not None:
+            result += f' = {self.transpile(node.initial_value,semi=False)}'
+        return result
 
     def transpile_external_stmt(self, node: ExternalStatement):
         return f'// {node.s_expr}'
@@ -184,6 +190,9 @@ class Transpiler(metaclass=ABCMeta):
 
     def transpile_parenthesized_expr(self, node: ParenthesizedExpr):
         return f'({self.transpile(node.expr, False)})'
+
+    def transpile_assignment_expr(self, node: AssignmentExpr):
+        return f'{self.transpile_ident_expr(node.left)} {node.op.value} {self.transpile(node.right, semi=False)}'
 
     def transpile_number_literal(self, node: NumberLiteral):
         return f'{node.value}'
