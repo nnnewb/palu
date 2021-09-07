@@ -119,3 +119,6 @@ tree-sitter-palu/*
 
 # generated c code
 source.c
+
+*.vsix
+node_modules

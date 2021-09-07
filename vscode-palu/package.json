@@ -1,0 +1,38 @@
+{
+  "name": "vscode-palu",
+  "displayName": "vscode-palu",
+  "description": "",
+  "version": "0.0.1",
+  "publisher": "weakptr",
+  "repository": {
+    "url": "https://github.com/nnnewb/palu"
+  },
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "palu",
+        "aliases": [
+          "palu",
+          "palu"
+        ],
+        "extensions": [
+          ".palu"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "palu",
+        "scopeName": "source.palu",
+        "path": "./syntaxes/palu.tmLanguage.json"
+      }
+    ]
+  }
+}
