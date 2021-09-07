@@ -171,7 +171,9 @@ class Transpiler(metaclass=ABCMeta):
         return f'{node.op.value}{self.transpile(node.expr, False)}'
 
     def transpile_condition_expr(self, node: ConditionExpr):
-        return f'({self.transpile(node.condition, False)}) ? ({self.transpile(node.consequence, False)}) : ({self.transpile(node.alternative, False)})'
+        return f'({self.transpile(node.condition, False)}) ?' + \
+            ' ({self.transpile(node.consequence, False)}) :' + \
+            ' ({self.transpile(node.alternative, False)})'
 
     def transpile_call_expr(self, node: CallExpr):
         args = []

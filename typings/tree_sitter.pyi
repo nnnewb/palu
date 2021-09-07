@@ -1,8 +1,4 @@
-from typing import Optional, List, Tuple, Any
-
-import tree_sitter
-
-# ----------------------------------- Node ----------------------------------- #
+from typing import Optional, List, Sequence, Tuple, Any, Union
 
 
 class Node:
@@ -172,7 +168,7 @@ class Parser:
         """Parse source code, creating a syntax tree."""
         ...
 
-    def set_language(self, language: tree_sitter.Language) -> None:
+    def set_language(self, language: Language) -> None:
         """Set the parser language."""
         ...
 
@@ -198,3 +194,34 @@ def _language_field_id_for_name(language_id: Any, name: str) -> int:
 def _language_query(language_id: Any, source: str) -> Query:
     """(internal)"""
     ...
+
+
+class Language:
+    """A tree-sitter language"""
+
+    @staticmethod
+    def build_library(output_path: str, repo_paths: Union[str, Sequence[str]]) -> bool:
+        """
+        Build a dynamic library at the given path, based on the parser
+        repositories at the given paths.
+
+        Returns `True` if the dynamic library was compiled and `False` if
+        the library already existed and was modified more recently than
+        any of the source files.
+        """
+        ...
+
+    def __init__(self, library_path: str, name: str):
+        """
+        Load the language with the given name from the dynamic library
+        at the given path.
+        """
+        ...
+
+    def field_id_for_name(self, name: str) -> int:
+        """Return the field id for a field name."""
+        ...
+
+    def query(self, source: str) -> Query:
+        """Create a Query with the given source code."""
+        ...

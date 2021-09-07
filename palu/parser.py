@@ -1,7 +1,6 @@
-from tree_sitter import Language
+from tree_sitter import Language, Tree, Node
 from tree_sitter import Parser as TSParser
 
-from palu import stubs
 from palu.ast import SourceFile
 from palu.transform import Transformer
 
@@ -19,11 +18,11 @@ class PaluSyntaxError(Exception):
         self.column = column
 
 
-_parser: stubs.Parser = TSParser()
+_parser = TSParser()
 _parser.set_language(palu)
 
 
-def _validate_recursive(tree: stubs.Tree, node: stubs.Node):
+def _validate_recursive(tree: Tree, node: Node):
     if node.has_error or node.is_missing:
         raise PaluSyntaxError(tree, *node.start_point)
 

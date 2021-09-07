@@ -14,7 +14,10 @@ class SymbolKind(Enum):
 
 
 class Typing(object):
-    def __init__(self, ref: Optional['Symbol'] = None, params: Optional[Sequence['Typing']] = None, returns: Optional['Typing'] = None) -> None:
+    def __init__(self,
+                 ref: Optional['Symbol'] = None,
+                 params: Optional[Sequence['Typing']] = None,
+                 returns: Optional['Typing'] = None):
         super().__init__()
         self.ref = ref
         self.params = params
@@ -44,7 +47,12 @@ class Typing(object):
 
 
 class Symbol(object):
-    def __init__(self, name: str, kind: SymbolKind, typing: 'Typing' = None, parent: 'Symbol' = None, c_type: Optional[str] = None) -> None:
+    def __init__(self,
+                 name: str,
+                 kind: SymbolKind,
+                 typing: 'Typing' = None,
+                 parent: 'Symbol' = None,
+                 c_type: Optional[str] = None):
         """ symbol
 
         Args:

@@ -251,11 +251,11 @@ class TypedIdent(object):
 
 
 class Func(ASTNode):
-    def __init__(self, func_name: str, params: Sequence[TypedIdent], returns: IdentExpr, body:  Sequence[ASTNode], sym: Symbol) -> None:
+    def __init__(self, name: str, params: Sequence[TypedIdent], ret: IdentExpr, body:  Sequence[ASTNode], sym: Symbol):
         super().__init__()
-        self.func_name = func_name
+        self.func_name = name
         self.params = params
-        self.returns = returns
+        self.returns = ret
         self.body = body
         self.sym = sym
 

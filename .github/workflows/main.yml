@@ -6,9 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -24,8 +24,20 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - name: Setup Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python_version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r dev-requirements.txt
 
-      - name: Mypy Check
-        # You may pin to the exact commit or the version.
-        # uses: jpetrucciani/mypy-check@e4de43b8ca2e83e7cc9caac4ecddcd2b8f947b7e
-        uses: jpetrucciani/mypy-check@0.910
+      - name: flake8
+        run: |
+          flake8 palu --count --exit-zero --max-complexity=10 --statistics
+
+      - name: mypy
+        run: |
+          mypy --install-types palu
+          mypy palu
