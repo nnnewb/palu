@@ -2,22 +2,41 @@
 
 palu is toy programing language interpreter writing by Python and [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
 
-## compiler features
+## roadmap
 
-- [x] intermediate ast structure
-- [x] very basic transpiler
-- [ ] type checker
-- [ ] optimizer
+**mod**
+  * [ ] source files
+    * [ ] function/method declarations
+    * [ ] struct declaration
+    * [ ] variables declaration
 
-## language features
+**native types**
+  * [ ] scalar
+    * [ ] i1/i8/i16/i32/i64/u8/u16/u32/u64 ... integral types
+    * [ ] f32/f64 ... float types
+    * [ ] pointer (raw pointer)
+    * [ ] enum (as integral)
+  * [ ] compound
+    * [ ] struct
+    * [ ] union
+    * [ ] array (constant size, pass by reference)
+  * [ ] function
+    * [ ] method (this pointer as first parameter)
+    * [ ] plain function
+      * [ ] export function (as plain c function, no name mangling)
+    * [ ] closure (how?)
+  * [ ] external
+    * [ ] macro (#define)
+      * [ ] with feature rich macro language?
+    * [ ] variable (global var)
+    * [ ] function (C function, with optional call convention)
 
-- [x] variable in scalar type
-- [x] if
-- [x] else
-- [x] while
-- [x] fn
-- [ ] slice(array?)
-- [ ] pointer
+**builtin types**
+  * [ ] linear
+    * [ ] string (immutable, pass by reference)
+    * [ ] slice (literal syntax, variadic size, pass by reference)
+  * [ ] mapping
+    * [ ] dict (literal syntax, just like python)
 
 ## try it!
 

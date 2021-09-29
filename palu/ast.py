@@ -1,37 +1,27 @@
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta
 from enum import Enum
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Tuple, Union
 
-from palu.symbol import Symbol
 
+class Node(metaclass=ABCMeta):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int]) -> None:
+        self.start_pos = start
+        self.end_pos = end
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} {self.start_pos[0]}:{self.start_pos[1]}>'
 
 class FuncDecl(object):
-    def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr', sym: Symbol) -> None:
+    def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr') -> None:
         super().__init__()
         self.func_name = func_name
         self.params = params
         self.returns = returns
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        params = []
-
-        for typed_ident in self.params:
-            params.append(f'{typed_ident.ident} : {typed_ident.typing.s_expr}')
-
-        return f'(declare {self.func_name} {" ".join(params)} {self.returns.s_expr})'
 
 
-class ASTNode(metaclass=ABCMeta):
-    @abstractproperty
-    def s_expr(self) -> str:
-        ...
-
-
-class SourceFile(ASTNode):
-    def __init__(self, statements: Sequence[ASTNode]) -> None:
-        super().__init__()
+class SourceFile(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], statements: Sequence[Node]) -> None:
+        super().__init__(start, end)
         self.mod = ''
         self.statements = statements
 
@@ -39,125 +29,63 @@ class SourceFile(ASTNode):
             if isinstance(stmt, ModDeclare):
                 self.mod = stmt.name
 
-    @property
-    def s_expr(self) -> str:
-        statements = []
-        for stmt in self.statements:
-            statements.append(stmt.s_expr)
 
-        return '\n'.join(statements)
+class EmptyStatement(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int]) -> None:
+        super().__init__(start, end)
 
 
-class EmptyStatement(ASTNode):
-    def __init__(self) -> None:
-        super().__init__()
-
-    @property
-    def s_expr(self) -> str:
-        return '()'
-
-
-class ModDeclare(ASTNode):
-    def __init__(self, name: str, sym: Symbol) -> None:
-        super().__init__()
+class ModDeclare(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], name: str) -> None:
+        super().__init__(start, end)
         self.name = name
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        return f'; module {self.name}'
 
 
-class DeclareStatement(ASTNode):
-    def __init__(self, typed_ident: 'TypedIdent', initial_value: ASTNode, sym: Symbol) -> None:
-        super().__init__()
+class DeclareStatement(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], typed_ident: 'TypedIdent', initial_value: Node) -> None:
+        super().__init__(start, end)
         self.typed_ident = typed_ident
         self.initial_value = initial_value
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        return f'(define {self.typed_ident.s_expr} {self.initial_value.s_expr})'
 
 
-class ExternalStatement(ASTNode):
-    def __init__(self, external_sym: Union['TypedIdent', 'FuncDecl'], sym: Symbol) -> None:
-        super().__init__()
+class ExternalStatement(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], external_sym: Union['TypedIdent', 'FuncDecl']) -> None:
+        super().__init__(start, end)
         self.external_sym = external_sym
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        return f'(external {self.external_sym.s_expr})'
 
 
-class WhileLoop(ASTNode):
-    def __init__(self, condition: ASTNode, statements: Sequence[ASTNode]) -> None:
-        super().__init__()
+class WhileLoop(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], condition: Node, statements: Sequence[Node]) -> None:
+        super().__init__(start, end)
         self.condition = condition
-        self.body: Sequence[ASTNode] = statements
-
-    @property
-    def s_expr(self) -> str:
-        statements = []
-        for stmt in self.body:
-            statements.append(stmt.s_expr)
-        return f'(while {self.condition.s_expr} {" ".join(statements)})'
+        self.body: Sequence[Node] = statements
 
 
-class If(ASTNode):
-    def __init__(self, condition: ASTNode, consequence: Sequence[ASTNode], alternative: Optional[Sequence[ASTNode]]) -> None:
-        super().__init__()
+class If(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], condition: Node, consequence: Sequence[Node], alternative: Optional[Sequence[Node]]) -> None:
+        super().__init__(start, end)
         self.condition = condition
         self.consequence = consequence
         self.alternative = alternative
 
-    @property
-    def s_expr(self) -> str:
-        consequence = []
-        alternative = []
 
-        for stmt in self.consequence:
-            consequence.append(stmt.s_expr)
-
-        if self.alternative:
-            for stmt in self.alternative:
-                alternative.append(stmt.s_expr)
-
-        return f'(if {self.condition.s_expr} ({" ".join(consequence)}) ({" ".join(alternative)}))'
-
-
-class ReturnStatement(ASTNode):
-    def __init__(self, expr: ASTNode) -> None:
-        super().__init__()
+class ReturnStatement(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], expr: Node) -> None:
+        super().__init__(start, end)
         self.expr = expr
 
-    @property
-    def s_expr(self) -> str:
-        return f'(return {self.expr.s_expr})'
 
-
-class TypeAliasStatement(ASTNode):
-    def __init__(self, ident: str, typing: 'IdentExpr', sym: Symbol) -> None:
-        super().__init__()
+class TypeAliasStatement(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], ident: str, typing: 'IdentExpr') -> None:
+        super().__init__(start, end)
         self.ident = ident
         self.typing = typing
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        return f'(define-type-alias {self.ident} ({self.typing.s_expr}))'
 
 
-class IdentExpr(ASTNode):
-    def __init__(self, *ident: str, sym: Symbol) -> None:
-        super().__init__()
+class IdentExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], *ident: str) -> None:
+        super().__init__(start, end)
         self.ident = ident
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        return f'{".".join(self.ident)}'
 
 
 class BinaryOp(Enum):
@@ -181,16 +109,12 @@ class BinaryOp(Enum):
     RSHIFT = '>>'
 
 
-class BinaryExpr(ASTNode):
-    def __init__(self, op: BinaryOp, left: ASTNode, right: ASTNode) -> None:
-        super().__init__()
+class BinaryExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], op: BinaryOp, left: Node, right: Node) -> None:
+        super().__init__(start, end)
         self.left = left
         self.right = right
         self.op = op
-
-    @property
-    def s_expr(self) -> str:
-        return f'({self.op} {self.left.s_expr} {self.right.s_expr})'
 
 
 class UnaryOp(Enum):
@@ -199,88 +123,48 @@ class UnaryOp(Enum):
     NOT = '!'
 
 
-class UnaryExpr(ASTNode):
-    def __init__(self, op: UnaryOp, expr: ASTNode) -> None:
-        super().__init__()
+class UnaryExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], op: UnaryOp, expr: Node) -> None:
+        super().__init__(start, end)
         self.op = op
         self.expr = expr
 
-    @property
-    def s_expr(self) -> str:
-        return f'({self.op} {self.expr.s_expr})'
 
-
-class ConditionExpr(ASTNode):
-    def __init__(self, condition: ASTNode, consequence: ASTNode, alternative: ASTNode) -> None:
-        super().__init__()
+class ConditionExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], condition: Node, consequence: Node, alternative: Node) -> None:
+        super().__init__(start, end)
         self.condition = condition
         self.consequence = consequence
         self.alternative = alternative
 
-    @property
-    def s_expr(self) -> str:
-        return f'(if {self.condition.s_expr} {self.consequence.s_expr} {self.alternative.s_expr})'
 
-
-class CallExpr(ASTNode):
-    def __init__(self, ident: IdentExpr, *args: ASTNode, fn_sym: Symbol) -> None:
-        super().__init__()
+class CallExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], ident: IdentExpr, *args: Node) -> None:
+        super().__init__(start, end)
         self.ident = ident
         self.args = args
-        self.fn_sym = fn_sym
-
-    @property
-    def s_expr(self) -> str:
-        args = []
-        for arg in self.args:
-            args.append(arg.s_expr)
-
-        return f'({self.ident.s_expr} {" ".join(args)})'
 
 
 class TypedIdent(object):
-    def __init__(self, ident: str, typing: IdentExpr, sym: Symbol) -> None:
+    def __init__(self, ident: str, typing: IdentExpr, ) -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
-        self.sym = sym
-
-    @property
-    def s_expr(self):
-        return f'{self.ident} : {self.typing.s_expr}'
 
 
-class Func(ASTNode):
-    def __init__(self, name: str, params: Sequence[TypedIdent], ret: IdentExpr, body:  Sequence[ASTNode], sym: Symbol):
-        super().__init__()
+class Func(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], name: str, params: Sequence[TypedIdent], ret: IdentExpr, body:  Sequence[Node]):
+        super().__init__(start, end)
         self.func_name = name
         self.params = params
         self.returns = ret
         self.body = body
-        self.sym = sym
-
-    @property
-    def s_expr(self) -> str:
-        params = []
-        body = []
-
-        for typed_ident in self.params:
-            params.append(f'{typed_ident.ident} : {typed_ident.typing.s_expr}')
-
-        for stmt in self.body:
-            body.append(f'{stmt.s_expr}')
-
-        return f'(define {self.func_name} {" ".join(params)} {self.returns.s_expr} ({" ".join(body)}))'
 
 
-class ParenthesizedExpr(ASTNode):
-    def __init__(self, expr: ASTNode) -> None:
-        super().__init__()
+class ParenthesizedExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], expr: Node) -> None:
+        super().__init__(start, end)
         self.expr = expr
-
-    @property
-    def s_expr(self) -> str:
-        return f'({self.expr.s_expr})'
 
 
 class AsssignmentOp(Enum):
@@ -296,53 +180,33 @@ class AsssignmentOp(Enum):
     BXAssign = '^='
 
 
-class AssignmentExpr(ASTNode):
-    def __init__(self, left: IdentExpr, op: AsssignmentOp, right: ASTNode):
-        super().__init__()
+class AssignmentExpr(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], left: IdentExpr, op: AsssignmentOp, right: Node):
+        super().__init__(start, end)
         self.left = left
         self.right = right
         self.op = op
 
-    @property
-    def s_expr(self) -> str:
-        return f'({self.op.value} {self.left.s_expr} {self.right.s_expr})'
 
-
-class NumberLiteral(ASTNode):
-    def __init__(self, text: str) -> None:
-        super().__init__()
+class NumberLiteral(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], text: str) -> None:
+        super().__init__(start, end)
         self.value = int(text)
 
-    @property
-    def s_expr(self) -> str:
-        return f'{self.value}'
 
-
-class StringLiteral(ASTNode):
-    def __init__(self, text) -> None:
-        super().__init__()
+class StringLiteral(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], text) -> None:
+        super().__init__(start, end)
         self.value = text
 
-    @property
-    def s_expr(self) -> str:
-        return f'"{self.value}"'
 
-
-class BooleanLiteral(ASTNode):
-    def __init__(self, text: str) -> None:
-        super().__init__()
+class BooleanLiteral(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], text: str) -> None:
+        super().__init__(start, end)
         self.value = True if text == 'true' else False
 
-    @property
-    def s_expr(self) -> str:
-        return f'{self.value}'
 
-
-class NullLiteral(ASTNode):
-    def __init__(self) -> None:
-        super().__init__()
+class NullLiteral(Node):
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int],) -> None:
+        super().__init__(start, end)
         self.value = None
-
-    @property
-    def s_expr(self) -> str:
-        return 'null'

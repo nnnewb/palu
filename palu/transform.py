@@ -1,36 +1,32 @@
 from typing import List, Sequence
 
-from tree_sitter import Node, Tree
+from tree_sitter import Node as TSNode, Tree
 
-from palu.ast import (ASTNode, AssignmentExpr, AsssignmentOp, BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
+from palu.ast import (Node as PaluNode, AssignmentExpr, AsssignmentOp, BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
                       ConditionExpr, DeclareStatement, EmptyStatement,
                       ExternalStatement, Func, FuncDecl, IdentExpr, If,
                       ModDeclare, NullLiteral, NumberLiteral,
                       ParenthesizedExpr, ReturnStatement, SourceFile,
                       StringLiteral, TypeAliasStatement, TypedIdent, UnaryExpr,
                       UnaryOp, WhileLoop)
-from palu.symbol import Symbol, SymbolKind, Typing
 
 
 class Transformer(object):
     def __init__(self) -> None:
         super().__init__()
-        self.stack: List[Symbol] = []
-        self.stack.append(Symbol('', SymbolKind.Global))
 
     def transform(self, tree: Tree, source: bytes) -> SourceFile:
-        self.stack = []
-        statements: List[ASTNode] = []
+        statements: List[PaluNode] = []
         root = tree.root_node
         for stmt in root.children:
             statements.append(self.transform_statement(stmt, source))
 
-        return SourceFile(statements)
+        return SourceFile(root.start_point, root.end_point, statements)
 
-    def transform_statement(self, node: Node, source: bytes) -> ASTNode:
+    def transform_statement(self, node: TSNode, source: bytes) -> PaluNode:
         real_stmt = node.children[0]
         if real_stmt.type == 'empty':
-            return EmptyStatement()
+            return EmptyStatement(real_stmt.start_point, real_stmt.end_point)
         elif real_stmt.type == 'declare':
             return self.transform_declare_stmt(real_stmt, source)
         elif real_stmt.type == 'external':
@@ -52,15 +48,13 @@ class Transformer(object):
         else:
             raise Exception(f'unexpected node type {real_stmt.type}')
 
-    def transform_mod(self, node: Node, source: bytes):
+    def transform_mod(self, node: TSNode, source: bytes):
         ident_node = node.child_by_field_name('name')
         assert ident_node
         name = self.get_text(ident_node, source)
-        sym = Symbol(name, SymbolKind.Module)
-        self.stack.append(sym)
-        return ModDeclare(name, sym)
+        return ModDeclare(node.start_point, node.end_point, name)
 
-    def transform_declare_stmt(self, node: Node, source: bytes):
+    def transform_declare_stmt(self, node: TSNode, source: bytes):
         typed_ident = node.child_by_field_name('typed_ident')
         initial_node = node.child_by_field_name('initial')
 
@@ -70,27 +64,15 @@ class Transformer(object):
         ident = self._transform_typed_ident(typed_ident, source)
         initial_value = self.transform_expr(initial_node, source)
 
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
+        return DeclareStatement(node.start_point, node.end_point, ident, initial_value)
 
-        t = Typing.from_type_ident(parent, '.'.join(ident.typing.ident))
-        sym = Symbol(ident.ident, SymbolKind.Var, t, parent)
-        return DeclareStatement(ident, initial_value, sym)
-
-    def transform_external_stmt(self, node: Node, source: bytes):
-        assert len(self.stack) > 0, 'stack size should always greater than 0'
-        parent: Symbol = self.stack[len(self.stack)-1]
+    def transform_external_stmt(self, node: TSNode, source: bytes):
         real_stmt = node.children[0]
         if real_stmt.type == 'external_variable':
             typed_ident_node = real_stmt.child_by_field_name('typed_ident')
             assert typed_ident_node
             typed_ident = self._transform_typed_ident(typed_ident_node, source)
-
-            typing_str = '.'.join(typed_ident.typing.ident)
-            t = Typing.from_type_ident(parent, typing_str)
-            sym = Symbol(typed_ident.ident, SymbolKind.Var, t, parent)
-            parent.add_child(sym)
-            return ExternalStatement(typed_ident, sym)
+            return ExternalStatement(node.start_point, node.end_point, typed_ident)
         elif real_stmt.type == 'external_function':
             func_name_node = real_stmt.child_by_field_name('func_name')
             assert func_name_node
@@ -98,38 +80,26 @@ class Transformer(object):
 
             params_node = real_stmt.child_by_field_name('params')
             assert params_node
-            # 预先创建 sym 来隔离 params 的作用域
-            sym = Symbol(func_name, SymbolKind.Func, None, parent)
-            self.stack.append(sym)
             params = self._transform_params(params_node, source)
-            self.stack.pop()
 
             returns_node = real_stmt.child_by_field_name('returns')
             assert returns_node
             returns = self.transform_ident_expr(returns_node, source)
 
-            t = Typing.from_func_signature(parent, [*map(lambda i: '.'.join(i.typing.ident), params)], '.'.join(returns.ident))
-            sym.typing = t
-            parent.add_child(sym)
+            return ExternalStatement(node.start_point, node.end_point, FuncDecl(func_name, params, returns))
 
-            return ExternalStatement(FuncDecl(func_name, params, returns, sym), sym)
-
-    def transform_while_stmt(self, node: Node, source: bytes):
+    def transform_while_stmt(self, node: TSNode, source: bytes):
         condition = node.child_by_field_name('condition')
         body = node.child_by_field_name('body')
 
         assert condition
         assert body
 
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
-        self.stack.append(Symbol('while', SymbolKind.CodeBlock, parent=parent))
         cb = self._transform_codeblock(body, source)
-        self.stack.pop()
 
-        return WhileLoop(self.transform_expr(condition, source), cb)
+        return WhileLoop(node.start_point, node.end_point, self.transform_expr(condition, source), cb)
 
-    def transform_if_stmt(self, node: Node, source: bytes):
+    def transform_if_stmt(self, node: TSNode, source: bytes):
         condition = node.child_by_field_name('condition')
         consequence_node = node.child_by_field_name('consequence')
         alternative_node = node.child_by_field_name('alternative')
@@ -137,33 +107,24 @@ class Transformer(object):
         assert condition
         assert consequence_node
 
-        # 隔离 if 代码块中的作用域
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
-        sym = Symbol('if-consequence', SymbolKind.CodeBlock, None, parent)
-
         if alternative_node:
-            self.stack.append(sym)
             consequence = self._transform_codeblock(consequence_node, source)
             alternative = self._transform_codeblock(alternative_node, source)
-            self.stack.pop()
 
-            return If(self.transform_expr(condition, source), consequence, alternative)
+            return If(node.start_point, node.end_point, self.transform_expr(condition, source), consequence, alternative)
         else:
-            self.stack.append(sym)
             consequence = self._transform_codeblock(consequence_node, source)
-            self.stack.pop()
 
-            return If(self.transform_expr(condition, source), consequence, None)
+            return If(node.start_point, node.end_point, self.transform_expr(condition, source), consequence, None)
 
-    def transform_return_stmt(self, node: Node, source: bytes):
+    def transform_return_stmt(self, node: TSNode, source: bytes):
         returns = node.child_by_field_name('returns')
 
         assert returns
 
-        return ReturnStatement(self.transform_expr(returns, source))
+        return ReturnStatement(node.start_point, node.end_point, self.transform_expr(returns, source))
 
-    def transform_type_alias(self, node: Node, source: bytes):
+    def transform_type_alias(self, node: TSNode, source: bytes):
         ident_node = node.child_by_field_name('ident')
         typing_node = node.child_by_field_name('typing')
 
@@ -173,14 +134,9 @@ class Transformer(object):
         ident = self.get_text(ident_node, source)
         typing = self.transform_ident_expr(typing_node, source)
 
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
-        sym = Symbol(ident, SymbolKind.Type, Typing.from_type_ident(parent, '.'.join(typing.ident)), parent)
-        parent.add_child(sym)
+        return TypeAliasStatement(node.start_point, node.end_point, ident, typing)
 
-        return TypeAliasStatement(ident, typing, sym)
-
-    def transform_expr(self, node: Node, source: bytes) -> ASTNode:
+    def transform_expr(self, node: TSNode, source: bytes) -> PaluNode:
         real_expr = node.children[0]
 
         if real_expr.type == 'ident_expr':
@@ -210,14 +166,11 @@ class Transformer(object):
         else:
             raise Exception(f'unexpected expr type {real_expr.type}')
 
-    def transform_ident_expr(self, node: Node, source: bytes):
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
+    def transform_ident_expr(self, node: TSNode, source: bytes):
         ident = [*map(lambda n: self.get_text(n, source), node.children)]
-        sym = parent.resolve_full_name('.'.join(ident))
-        return IdentExpr(*ident, sym=sym)
+        return IdentExpr(node.start_point, node.end_point, *ident)
 
-    def transform_binary_expr(self, node: Node, source: bytes):
+    def transform_binary_expr(self, node: TSNode, source: bytes):
         operator = node.child_by_field_name('operator')
         left = node.child_by_field_name('left')
         right = node.child_by_field_name('right')
@@ -226,18 +179,22 @@ class Transformer(object):
         assert left
         assert right
 
-        return BinaryExpr(BinaryOp(operator.type), self.transform_expr(left, source), self.transform_expr(right, source))
+        return BinaryExpr(
+            node.start_point, node.end_point,
+            BinaryOp(operator.type),
+            self.transform_expr(left, source),
+            self.transform_expr(right, source))
 
-    def transform_unary_expr(self, node: Node, source: bytes):
+    def transform_unary_expr(self, node: TSNode, source: bytes):
         operator = node.child_by_field_name('operator')
         argument = node.child_by_field_name('argument')
 
         assert operator
         assert argument
 
-        return UnaryExpr(UnaryOp(operator.type), self.transform_expr(argument, source))
+        return UnaryExpr(node.start_point, node.end_point, UnaryOp(operator.type), self.transform_expr(argument, source))
 
-    def transform_condition_expr(self, node: Node, source: bytes):
+    def transform_condition_expr(self, node: TSNode, source: bytes):
         condition = node.child_by_field_name('condition')
         consequence = node.child_by_field_name('consequence')
         alternative = node.child_by_field_name('alternative')
@@ -247,28 +204,25 @@ class Transformer(object):
         assert alternative
 
         return ConditionExpr(
+            node.start_point, node.end_point,
             self.transform_expr(condition, source),
             self.transform_expr(consequence, source),
             self.transform_expr(alternative, source),
         )
 
-    def transform_call_expr(self, node: Node, source: bytes):
+    def transform_call_expr(self, node: TSNode, source: bytes):
         func_name_node = node.child_by_field_name('func_name')
         args_node = node.child_by_field_name('args')
 
         assert func_name_node
         assert args_node
 
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
-
         func_name = self.transform_ident_expr(func_name_node, source)
         args = self._transform_argument_list(args_node, source)
-        fn_sym = parent.resolve_full_name('.'.join(func_name.ident))
 
-        return CallExpr(func_name, *args, fn_sym=fn_sym)
+        return CallExpr(node.start_point, node.end_point, func_name, *args)
 
-    def transform_func_stmt(self, node: Node, source: bytes):
+    def transform_func_stmt(self, node: TSNode, source: bytes):
         func_name_node = node.child_by_field_name('func_name')
         params_node = node.child_by_field_name('params')
         returns_node = node.child_by_field_name('returns')
@@ -281,40 +235,23 @@ class Transformer(object):
 
         func_name = self.get_text(func_name_node, source)
 
-        assert len(self.stack) > 0, 'stack size should always greater than 0'
-        parent: Symbol = self.stack[len(self.stack)-1]
-
-        # 预先创建 sym 隔离函数参数作用域
-        sym = Symbol(func_name, SymbolKind.Func, None, parent)
-        self.stack.append(sym)
-
         # 解析函数签名
         params = self._transform_params(params_node, source)
         returns = self.transform_ident_expr(returns_node, source)
 
-        # 补全符号的函数签名
-        t = Typing.from_func_signature(parent, [*map(lambda i: '.'.join(i.typing.ident), params)], '.'.join(returns.ident))
-        sym.typing = t
-
-        # 把函数符号加入 parent 以支持递归
-        parent.add_child(sym)
-
         # 解析函数体内容
         body = self._transform_codeblock(body_node, source)
 
-        # 结束
-        self.stack.pop()
+        return Func(node.start_point, node.end_point, func_name, params, returns, body)
 
-        return Func(func_name, params, returns, body, sym)
-
-    def transform_parenthesized_expr(self, node: Node, source: bytes):
+    def transform_parenthesized_expr(self, node: TSNode, source: bytes):
         expr = node.child_by_field_name('expr')
 
         assert expr
 
-        return ParenthesizedExpr(self.transform_expr(expr, source))
+        return ParenthesizedExpr(node.start_point, node.end_point, self.transform_expr(expr, source))
 
-    def transform_assignment_expr(self, node: Node, source: bytes):
+    def transform_assignment_expr(self, node: TSNode, source: bytes):
         left_node = node.child_by_field_name('left')
         op_node = node.child_by_field_name('operator')
         right_node = node.child_by_field_name('right')
@@ -327,24 +264,24 @@ class Transformer(object):
         left = self.transform_ident_expr(left_node, source)
         right = self.transform_expr(right_node, source)
 
-        return AssignmentExpr(left, op, right)
+        return AssignmentExpr(node.start_point, node.end_point, left, op, right)
 
-    def transform_number_literal(self, node: Node, source: bytes):
-        return NumberLiteral(str(source[node.start_byte:node.end_byte], 'utf-8'))
+    def transform_number_literal(self, node: TSNode, source: bytes):
+        return NumberLiteral(node.start_point, node.end_point, str(source[node.start_byte:node.end_byte], 'utf-8'))
 
-    def transform_string_literal(self, node: Node, source: bytes):
-        return StringLiteral(str(source[node.start_byte:node.end_byte], 'utf-8'))
+    def transform_string_literal(self, node: TSNode, source: bytes):
+        return StringLiteral(node.start_point, node.end_point, str(source[node.start_byte:node.end_byte], 'utf-8'))
 
-    def transform_true_lit(self, node: Node, source: bytes) -> BooleanLiteral:
-        return BooleanLiteral(str(source[node.start_byte:node.end_byte], 'utf-8'))
+    def transform_true_lit(self, node: TSNode, source: bytes) -> BooleanLiteral:
+        return BooleanLiteral(node.start_point, node.end_point, str(source[node.start_byte:node.end_byte], 'utf-8'))
 
-    def transform_false_lit(self, node: Node, source: bytes) -> BooleanLiteral:
-        return BooleanLiteral(str(source[node.start_byte:node.end_byte], 'utf-8'))
+    def transform_false_lit(self, node: TSNode, source: bytes) -> BooleanLiteral:
+        return BooleanLiteral(node.start_point, node.end_point, str(source[node.start_byte:node.end_byte], 'utf-8'))
 
-    def transform_null_lit(self, _: Node) -> NullLiteral:
-        return NullLiteral()
+    def transform_null_lit(self, node: TSNode) -> NullLiteral:
+        return NullLiteral(node.start_point, node.end_point)
 
-    def _transform_typed_ident(self, node: Node, source: bytes) -> TypedIdent:
+    def _transform_typed_ident(self, node: TSNode, source: bytes) -> TypedIdent:
         ident_node = node.child_by_field_name('ident')
         typing_node = node.child_by_field_name('typing')
 
@@ -354,21 +291,15 @@ class Transformer(object):
         ident = self.get_text(ident_node, source)
         typing = self.transform_ident_expr(typing_node, source)
 
-        assert len(self.stack) > 0
-        parent = self.stack[len(self.stack)-1]
-        t = Typing.from_type_ident(parent, '.'.join(typing.ident))
-        sym = Symbol(ident, SymbolKind.Var, t, parent)
-        parent.add_child(sym)
+        return TypedIdent(ident, typing)
 
-        return TypedIdent(ident, typing, sym)
-
-    def _transform_codeblock(self, node: Node, source: bytes) -> Sequence[ASTNode]:
+    def _transform_codeblock(self, node: TSNode, source: bytes) -> Sequence[PaluNode]:
         return [*map(lambda n: self.transform_statement(n, source), filter(lambda n: n.is_named, node.children))]
 
-    def _transform_argument_list(self, node: Node, source: bytes) -> Sequence[ASTNode]:
+    def _transform_argument_list(self, node: TSNode, source: bytes) -> Sequence[PaluNode]:
         return [*map(lambda n: self.transform_expr(n, source), filter(lambda n: n.is_named, node.children))]
 
-    def _transform_params(self, node: Node, source: bytes) -> Sequence[TypedIdent]:
+    def _transform_params(self, node: TSNode, source: bytes) -> Sequence[TypedIdent]:
         result = []
         if node.named_child_count > 0:
             for n in node.children:
@@ -377,5 +308,5 @@ class Transformer(object):
 
         return result
 
-    def get_text(self, node: Node, source: bytes) -> str:
+    def get_text(self, node: TSNode, source: bytes) -> str:
         return str(source[node.start_byte:node.end_byte], 'utf-8')
