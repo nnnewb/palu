@@ -25,7 +25,7 @@ module.exports = grammar({
   name: "palu",
 
   rules: {
-    source_file: ($) => repeat(choice($.stmt)),
+    source_file: ($) => repeat(choice($.mod, $.external, $.func, $.type_alias)),
     stmt: ($) =>
       choice(
         $.empty,
@@ -37,7 +37,8 @@ module.exports = grammar({
         $.return,
         $.func,
         $.type_alias,
-        $.call_expr,
+        $.assignment,
+        $.call_expr
       ),
     empty: ($) => ";",
     mod: ($) => seq("mod", field("name", $.ident)),
@@ -49,7 +50,6 @@ module.exports = grammar({
         $.cond_expr,
         $.call_expr,
         $.parenthesized_expr,
-        $.assignment_expr,
         $.number_literal,
         $.string_literal,
         $.true_lit,
@@ -58,7 +58,7 @@ module.exports = grammar({
       ),
     parenthesized_expr: ($) => seq("(", field("expr", $.expr), ")"),
 
-    assignment_expr: ($) =>
+    assignment: ($) =>
       prec.right(
         PREC.ASSIGNMENT,
         seq(
@@ -196,7 +196,8 @@ module.exports = grammar({
         optional(seq("else", field("alternative", $.codeblock)))
       ),
     // return expr
-    return: ($) => prec.right(seq("return", optional(field("returns", $.expr)))),
+    return: ($) =>
+      prec.right(seq("return", optional(field("returns", $.expr)))),
 
     // do stmt [...stmt] end
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),

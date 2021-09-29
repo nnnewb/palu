@@ -86,6 +86,8 @@ class Transformer(object):
             return self.transform_mod(real_stmt, source)
         elif real_stmt.type == 'call_expr':
             return self.transform_call_expr(real_stmt, source)
+        elif real_stmt.type == 'assignment':
+            return self.transform_assignment_stmt(real_stmt, source)
         else:
             raise Exception(f'unexpected node type {real_stmt.type}')
 
@@ -215,8 +217,6 @@ class Transformer(object):
             return self.transform_call_expr(real_expr, source)
         elif real_expr.type == 'parenthesized_expr':
             return self.transform_parenthesized_expr(real_expr, source)
-        elif real_expr.type == 'assignment_expr':
-            return self.transform_assignment_expr(real_expr, source)
         elif real_expr.type == 'number_literal':
             return self.transform_number_literal(real_expr, source)
         elif real_expr.type == 'string_literal':
@@ -315,7 +315,7 @@ class Transformer(object):
 
         return ParenthesizedExpr(node.start_point, node.end_point, self.transform_expr(expr, source))
 
-    def transform_assignment_expr(self, node: TSNode, source: bytes):
+    def transform_assignment_stmt(self, node: TSNode, source: bytes):
         left_node = node.child_by_field_name('left')
         op_node = node.child_by_field_name('operator')
         right_node = node.child_by_field_name('right')

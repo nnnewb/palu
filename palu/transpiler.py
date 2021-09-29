@@ -193,6 +193,23 @@ class Transpiler:
         self._buffer.write(unary.op.value)
         self._dispatcher.dispatch(self, unary.expr)
 
+    @_dispatcher.subscribe(ConditionExpr)
+    def _transpile_condition_expr(self, expr: ConditionExpr):
+        self._buffer.write('(')
+        self._dispatcher.dispatch(self, expr.condition)
+        self._buffer.write(') ? (')
+        self._dispatcher.dispatch(self, expr.consequence)
+        self._buffer.write(') : (')
+        self._dispatcher.dispatch(self, expr.alternative)
+        self._buffer.write(')')
+
+    @_dispatcher.subscribe(AssignmentExpr)
+    def _transpile_assignment_expr(self, expr: AssignmentExpr):
+        self._dispatcher.dispatch(self, expr.left)
+        self._buffer.write(expr.op.value)
+        self._dispatcher.dispatch(self, expr.right)
+        self._buffer.write(';')
+
     def transpile(self, node: Node):
         self._buffer.truncate(0)
         self._dispatcher.dispatch(self, node)
