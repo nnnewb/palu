@@ -1,7 +1,7 @@
 from tree_sitter import Language, Tree, Node
 from tree_sitter import Parser as TSParser
 
-from palu.ast import SourceFile
+from palu.ast.source import SourceFile
 from palu.transform import Transformer
 
 lang_lib = 'build/palu.dll'

@@ -1,14 +1,20 @@
-from typing import List, Sequence
+from typing import List, Sequence, Union
 
-from tree_sitter import Node as TSNode, Tree
+from tree_sitter import Node as TSNode
+from tree_sitter import Tree
 
-from palu.ast import (Node as PaluNode, AssignmentExpr, AsssignmentOp, BinaryExpr, BinaryOp, BooleanLiteral, CallExpr,
-                      ConditionExpr, DeclareStatement, EmptyStatement,
-                      ExternalStatement, Func, FuncDecl, IdentExpr, If,
-                      ModDeclare, NullLiteral, NumberLiteral,
-                      ParenthesizedExpr, ReturnStatement, SourceFile,
-                      StringLiteral, TypeAliasStatement, TypedIdent, UnaryExpr,
-                      UnaryOp, WhileLoop)
+from palu.ast.expr import (AssignmentExpr, BinaryExpr, CallExpr, ConditionExpr,
+                           IdentExpr, ParenthesizedExpr, TypedIdent, UnaryExpr)
+from palu.ast.func import Func
+from palu.ast.literals import (BooleanLiteral, NullLiteral, NumberLiteral,
+                               StringLiteral)
+from palu.ast.node import Node as PaluNode
+from palu.ast.op import AsssignmentOp, BinaryOp, UnaryOp
+from palu.ast.source import ModDeclare, SourceFile
+from palu.ast.statements import (DeclareStatement, EmptyStatement,
+                                 ExternalFunctionSpec, ExternalStatement,
+                                 ExternalVariableSpec, If, ReturnStatement,
+                                 TypeAliasStatement, WhileLoop)
 
 
 class Transformer(object):
@@ -72,7 +78,13 @@ class Transformer(object):
             typed_ident_node = real_stmt.child_by_field_name('typed_ident')
             assert typed_ident_node
             typed_ident = self._transform_typed_ident(typed_ident_node, source)
-            return ExternalStatement(node.start_point, node.end_point, typed_ident)
+            return ExternalStatement(
+                node.start_point,
+                node.end_point,
+                ExternalVariableSpec(
+                    real_stmt.start_point,
+                    real_stmt.end_point,
+                    typed_ident))
         elif real_stmt.type == 'external_function':
             func_name_node = real_stmt.child_by_field_name('func_name')
             assert func_name_node
@@ -86,7 +98,17 @@ class Transformer(object):
             assert returns_node
             returns = self.transform_ident_expr(returns_node, source)
 
-            return ExternalStatement(node.start_point, node.end_point, FuncDecl(func_name, params, returns))
+            return ExternalStatement(
+                node.start_point,
+                node.end_point,
+                ExternalFunctionSpec(
+                    node.start_point,
+                    node.end_point,
+                    func_name,
+                    params,
+                    returns))
+        else:
+            raise Exception(f'unexpected external statement type {real_stmt.type}')
 
     def transform_while_stmt(self, node: TSNode, source: bytes):
         condition = node.child_by_field_name('condition')
@@ -313,12 +335,15 @@ class Transformer(object):
     def _transform_argument_list(self, node: TSNode, source: bytes) -> Sequence[PaluNode]:
         return [*map(lambda n: self.transform_expr(n, source), filter(lambda n: n.is_named, node.children))]
 
-    def _transform_params(self, node: TSNode, source: bytes) -> Sequence[TypedIdent]:
-        result = []
-        if node.named_child_count > 0:
-            for n in node.children:
-                if n.type == 'typed_ident':
-                    result.append(self._transform_typed_ident(n, source))
+    def _transform_params(self, node: TSNode, source: bytes) -> Sequence[Union[TypedIdent, str]]:
+        result: List[Union[TypedIdent, str]] = []
+        for child in node.children:
+            if child.type in '()':
+                continue
+            elif child.type == 'typed_ident':
+                result.append(self._transform_typed_ident(child, source))
+            else:
+                result.append(self.get_text(child, source))
 
         return result
 

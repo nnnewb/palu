@@ -222,7 +222,15 @@ module.exports = grammar({
     params: ($) =>
       seq(
         "(",
-        choice("void", seq($.typed_ident, optional(seq(",", $.typed_ident)))),
+        choice(
+          "void",
+          "...",
+          seq(
+            $.typed_ident,
+            optional(repeat(seq(",", $.typed_ident))),
+            optional(seq(",", "..."))
+          )
+        ),
         ")"
       ),
 
