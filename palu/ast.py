@@ -11,6 +11,7 @@ class Node(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.start_pos[0]}:{self.start_pos[1]}>'
 
+
 class FuncDecl(object):
     def __init__(self, func_name: str, params: Sequence['TypedIdent'], returns: 'IdentExpr') -> None:
         super().__init__()
@@ -76,10 +77,11 @@ class ReturnStatement(Node):
 
 
 class TypeAliasStatement(Node):
-    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], ident: str, typing: 'IdentExpr') -> None:
+    def __init__(self, start: Tuple[int, int], end: Tuple[int, int], ident: str, typing: 'IdentExpr', is_pointer=False) -> None:
         super().__init__(start, end)
         self.ident = ident
         self.typing = typing
+        self.is_pointer = is_pointer
 
 
 class IdentExpr(Node):
@@ -146,10 +148,11 @@ class CallExpr(Node):
 
 
 class TypedIdent(object):
-    def __init__(self, ident: str, typing: IdentExpr, ) -> None:
+    def __init__(self, ident: str, typing: IdentExpr, is_pointer=False) -> None:
         super().__init__()
         self.ident = ident
         self.typing = typing
+        self.is_pointer = is_pointer
 
 
 class Func(Node):

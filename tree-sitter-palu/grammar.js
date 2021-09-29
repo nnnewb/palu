@@ -202,7 +202,12 @@ module.exports = grammar({
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),
 
     type_alias: ($) =>
-      seq("type", field("ident", $.ident), "=", field("typing", $.ident_expr)),
+      seq(
+        "type",
+        field("ident", $.ident),
+        "=",
+        field("typing", choice($.pointer, $.ident_expr))
+      ),
 
     // =======================================================
     // identifier
@@ -211,8 +216,9 @@ module.exports = grammar({
     typed_ident: ($) =>
       seq(
         field("ident", $.ident),
-        optional(seq(":", field("typing", $.ident_expr)))
+        optional(seq(":", field("typing", choice($.pointer, $.ident_expr))))
       ),
+    pointer: ($) => seq("*", field("underlying", $.ident_expr)),
     params: ($) =>
       seq(
         "(",

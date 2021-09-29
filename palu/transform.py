@@ -132,9 +132,16 @@ class Transformer(object):
         assert typing_node
 
         ident = self.get_text(ident_node, source)
-        typing = self.transform_ident_expr(typing_node, source)
+        if typing_node.type == 'ident_expr':
+            typing = self.transform_ident_expr(typing_node, source)
+        elif typing_node.type == 'pointer':
+            underlying_node = typing_node.child_by_field_name('underlying')
+            assert underlying_node
+            typing = self.transform_ident_expr(underlying_node, source)
+        else:
+            raise Exception(f'unexpected typing node type {typing_node.type}')
 
-        return TypeAliasStatement(node.start_point, node.end_point, ident, typing)
+        return TypeAliasStatement(node.start_point, node.end_point, ident, typing, typing_node.type == 'pointer')
 
     def transform_expr(self, node: TSNode, source: bytes) -> PaluNode:
         real_expr = node.children[0]
@@ -289,9 +296,16 @@ class Transformer(object):
         assert typing_node
 
         ident = self.get_text(ident_node, source)
-        typing = self.transform_ident_expr(typing_node, source)
+        if typing_node.type == 'ident_expr':
+            typing = self.transform_ident_expr(typing_node, source)
+        elif typing_node.type == 'pointer':
+            underlying_node = typing_node.child_by_field_name('underlying')
+            assert underlying_node
+            typing = self.transform_ident_expr(underlying_node, source)
+        else:
+            raise Exception(f'unexpected typing node type {typing_node.type}')
 
-        return TypedIdent(ident, typing)
+        return TypedIdent(ident, typing, typing_node.type == 'pointer')
 
     def _transform_codeblock(self, node: TSNode, source: bytes) -> Sequence[PaluNode]:
         return [*map(lambda n: self.transform_statement(n, source), filter(lambda n: n.is_named, node.children))]
