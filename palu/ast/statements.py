@@ -1,5 +1,5 @@
 from palu.ast.node import Node
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple
 
 
 class EmptyStatement(Node):

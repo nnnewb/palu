@@ -82,10 +82,10 @@ class Transformer(object):
             return self.transform_type_alias(real_stmt, source)
         elif real_stmt.type == 'func':
             return self.transform_func_stmt(real_stmt, source)
-        elif real_stmt.type == 'expr':
-            return self.transform_expr(real_stmt, source)
         elif real_stmt.type == 'mod':
             return self.transform_mod(real_stmt, source)
+        elif real_stmt.type == 'call_expr':
+            return self.transform_call_expr(real_stmt, source)
         else:
             raise Exception(f'unexpected node type {real_stmt.type}')
 
@@ -373,7 +373,7 @@ class Transformer(object):
     def _transform_params(self, node: TSNode, source: bytes) -> Sequence[Union[TypedIdent, str]]:
         result: List[Union[TypedIdent, str]] = []
         for child in node.children:
-            if child.type in '()':
+            if child.type in '(,)':
                 continue
             elif child.type == 'typed_ident':
                 result.append(self._transform_typed_ident(child, source))

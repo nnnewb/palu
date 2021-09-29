@@ -30,11 +30,12 @@ class Scope(object):
         else:
             return None
 
-    def add_symbol(self, sym: PaluSymbol):
-        if sym in self.symbols:
-            raise SymbolRedefinedException(sym, self.symbols[sym.name])
+    def add_symbol(self, *symbols: PaluSymbol):
+        for sym in symbols:
+            if sym in self.symbols:
+                raise SymbolRedefinedException(sym, self.symbols[sym.name])
 
-        self.symbols[sym.name] = sym
+            self.symbols[sym.name] = sym
 
     def add_child_scope(self, scope: 'Scope'):
         self.children.append(scope)

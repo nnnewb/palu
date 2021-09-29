@@ -37,7 +37,7 @@ module.exports = grammar({
         $.return,
         $.func,
         $.type_alias,
-        $.expr
+        $.call_expr,
       ),
     empty: ($) => ";",
     mod: ($) => seq("mod", field("name", $.ident)),
@@ -193,10 +193,10 @@ module.exports = grammar({
         "if",
         field("condition", $.expr),
         field("consequence", $.codeblock),
-        field("alternative", optional($.codeblock))
+        optional(seq("else", field("alternative", $.codeblock)))
       ),
     // return expr
-    return: ($) => seq("return", field("returns", $.expr)),
+    return: ($) => prec.right(seq("return", optional(field("returns", $.expr)))),
 
     // do stmt [...stmt] end
     codeblock: ($) => seq("do", optional(repeat($.stmt)), "end"),
