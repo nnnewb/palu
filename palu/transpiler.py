@@ -51,7 +51,7 @@ class Transpiler:
     def _emit(self, node: Node):
         self._emitter.emit(self, node)
 
-    def _write(self, *text: str, newline=False):
+    def _write(self, *text: str):
         for t in text:
             self._buffer.write(t)
 
