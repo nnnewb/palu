@@ -4,6 +4,15 @@ palu is toy programing language interpreter writing by Python and [tree-sitter](
 
 ## roadmap
 
+**type checker**
+  * [ ] check symbol redefine
+    * [ ] ... check name conflict after name mangling
+  * [ ] check symbol exists
+  * [ ] simple type check: exact match
+    * [ ] initialize
+    * [ ] assignment
+    * [ ] passing argument
+
 **mod**
   * [ ] source files
     * [ ] function/method declarations
