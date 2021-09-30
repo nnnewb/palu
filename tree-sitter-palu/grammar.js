@@ -29,13 +29,10 @@ module.exports = grammar({
     stmt: ($) =>
       choice(
         $.empty,
-        $.mod,
         $.declare,
-        $.external,
         $.while,
         $.if,
         $.return,
-        $.func,
         $.type_alias,
         $.assignment,
         $.call_expr

@@ -60,7 +60,17 @@ class Transformer(object):
         statements: List[PaluNode] = []
         root = tree.root_node
         for stmt in root.children:
-            statements.append(self.transform_statement(stmt, source))
+            if stmt.type == 'mod':
+                result = self.transform_mod(stmt, source)
+            elif stmt.type == 'external':
+                result = self.transform_external_stmt(stmt, source)
+            elif stmt.type == 'func':
+                result = self.transform_func_stmt(stmt, source)
+            elif stmt.type == 'type_alias':
+                result = self.transform_type_alias(stmt, source)
+            else:
+                raise Exception(f'unexpected node type {stmt.type}')
+            statements.append(result)
 
         return SourceFile(root.start_point, root.end_point, statements)
 
@@ -70,8 +80,6 @@ class Transformer(object):
             return EmptyStatement(real_stmt.start_point, real_stmt.end_point)
         elif real_stmt.type == 'declare':
             return self.transform_declare_stmt(real_stmt, source)
-        elif real_stmt.type == 'external':
-            return self.transform_external_stmt(real_stmt, source)
         elif real_stmt.type == 'while':
             return self.transform_while_stmt(real_stmt, source)
         elif real_stmt.type == 'if':
@@ -80,14 +88,10 @@ class Transformer(object):
             return self.transform_return_stmt(real_stmt, source)
         elif real_stmt.type == 'type_alias':
             return self.transform_type_alias(real_stmt, source)
-        elif real_stmt.type == 'func':
-            return self.transform_func_stmt(real_stmt, source)
-        elif real_stmt.type == 'mod':
-            return self.transform_mod(real_stmt, source)
-        elif real_stmt.type == 'call_expr':
-            return self.transform_call_expr(real_stmt, source)
         elif real_stmt.type == 'assignment':
             return self.transform_assignment_stmt(real_stmt, source)
+        elif real_stmt.type == 'call_expr':
+            return self.transform_call_expr(real_stmt, source)
         else:
             raise Exception(f'unexpected node type {real_stmt.type}')
 
