@@ -1,5 +1,6 @@
 from palu.typechecker.symbol import PaluSymbol
 from typing import Dict, List, Optional
+from enum import Enum
 
 
 class SymbolRedefinedException(Exception):
@@ -14,13 +15,38 @@ class ScopedSymbol:
         self.scope = scope
         self.symbol = sym
 
+    @property
+    def mangling_name(self):
+        return self.scope.name_mangling(self.symbol.name)
+
 
 class Scope(object):
-    def __init__(self) -> None:
+    class ScopeKind(Enum):
+        Mod = 'mod'
+        CodeBlock = 'codeblock'
+
+    def __init__(self, name: Optional[str] = None, kind: 'ScopeKind' = ScopeKind.CodeBlock, *,
+                 name_mangling: Optional[bool] = None) -> None:
         super().__init__()
+        self.name = name
+        self.kind = kind
+        self._name_mangling = False
+        if kind == Scope.ScopeKind.Mod:
+            self._name_mangling = True
+
+        if name_mangling is not None:
+            self._name_mangling = name_mangling
+
         self.symbols: Dict[str, PaluSymbol] = {}
         self.parent: Optional[Scope] = None
         self.children: List[Scope] = []
+
+    def name_mangling(self, name: str):
+        if self._name_mangling:
+            if self.name is None:
+                raise Exception('name mangling scope must have a name')
+            return self.name+'_'+name
+        return name
 
     def lookup(self, name: str) -> Optional[ScopedSymbol]:
         if name in self.symbols:
